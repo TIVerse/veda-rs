@@ -1,1 +1,86 @@
-/target
+# ----------------------------------------
+# Rust / Cargo
+# ----------------------------------------
+/target/
+/Cargo.lock
+**/*.rs.bk
+
+# Ignore build artifacts from custom build scripts
+**/*.rlib
+**/*.rmeta
+**/*.d
+
+# Ignore temporary build output
+**/*.o
+**/*.so
+**/*.dll
+**/*.exe
+**/*.dSYM/
+**/*.pdb
+
+# ----------------------------------------
+# Logs & Temp Files
+# ----------------------------------------
+*.log
+*.tmp
+*.swp
+*.swo
+
+# ----------------------------------------
+# Coverage / Profiling
+# ----------------------------------------
+/coverage/
+/.profdata
+.profraw
+*.gcda
+*.gcno
+*.lcov
+
+# ----------------------------------------
+# IDE / Editor Specific
+# ----------------------------------------
+# VS Code
+.vscode/
+# JetBrains (CLion, IntelliJ)
+.idea/
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+# Vim
+*.swp
+*.swo
+# Emacs
+*~
+# Eclipse
+.project
+.cproject
+.settings/
+# Other Editors
+*.kate-swp
+
+# ----------------------------------------
+# OS Files
+# ----------------------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+# Linux
+*~
+# Windows
+Thumbs.db
+Desktop.ini
+
+# ----------------------------------------
+# Optional Extras
+# ----------------------------------------
+/dist/
+/out/
+/build/
+/bin/
+/debug/
+/release/
+/docs/generated/
+/node_modules/
+/.env
+.env.*
