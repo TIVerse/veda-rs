@@ -2,7 +2,7 @@
 
 **Version:** 1.0.0  
 **Status:** Implementation-Ready Technical Specification  
-**Author:** VEDA Core Team  
+**Author:** Eshan Roy  
 **Last Updated:** 2025-10-26
 
 ---
@@ -2526,7 +2526,7 @@ Special thanks to the Rust community for feedback and contributions.
 - **Issues**: https://github.com/veda-rs/veda/issues
 - **Discussions**: https://github.com/veda-rs/veda/discussions
 - **Discord**: https://discord.gg/veda-rs
-- **Email**: team@veda-rs.org
+- **Email**: eshanized@proton.me
 
 ---
 

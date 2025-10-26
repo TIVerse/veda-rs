@@ -1,9 +1,8 @@
 # VEDA: Versatile Execution and Dynamic Adaptation
 
-[![Crates.io](https://img.shields.io/crates/v/veda-rs.svg)](https://crates.io/crates/veda-rs)
-[![Documentation](https://docs.rs/veda-rs/badge.svg)](https://docs.rs/veda-rs)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE)
-[![CI](https://github.com/veda-rs/veda/workflows/CI/badge.svg)](https://github.com/veda-rs/veda/actions)
+[![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org)
+[![GitHub](https://img.shields.io/github/stars/TIVerse/veda-rs?style=social)](https://github.com/TIVerse/veda-rs)
 
 A parallel runtime library for Rust with adaptive scheduling and work-stealing. Designed to be mostly compatible with Rayon but with better handling of variable workloads.
 
@@ -49,10 +48,10 @@ Available features:
 ### Basic Parallel Iterator
 
 ```rust
-use veda::prelude::*;
+use veda_rs::prelude::*;
 
 fn main() {
-    veda::init().unwrap();
+    veda_rs::init().unwrap();
     
     let sum: i32 = (0..1000)
         .into_par_iter()
@@ -60,7 +59,7 @@ fn main() {
         .sum();
     
     println!("Sum: {}", sum);
-    veda::shutdown();
+    veda_rs::shutdown();
 }
 ```
 
@@ -305,10 +304,9 @@ VEDA builds upon the foundational work of:
 
 ## Contact
 
-- **Documentation**: https://docs.rs/veda-rs
-- **Repository**: https://github.com/veda-rs/veda
-- **Issues**: https://github.com/veda-rs/veda/issues
-- **Discussions**: https://github.com/veda-rs/veda/discussions
+- **Repository**: https://github.com/TIVerse/veda-rs
+- **Issues**: https://github.com/TIVerse/veda-rs/issues
+- **Discussions**: https://github.com/TIVerse/veda-rs/discussions
 
 ## Roadmap
 

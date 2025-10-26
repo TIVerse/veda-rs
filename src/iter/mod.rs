@@ -1,3 +1,3 @@
 pub mod par_iter;
 
-pub use par_iter::{IntoParallelIterator, ParallelIterator};
+pub use par_iter::{IntoParallelIterator, ParallelIterator, ParallelSlice};
