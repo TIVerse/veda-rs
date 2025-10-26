@@ -1,6 +1,72 @@
 [package]
 name = "veda-rs"
-version = "0.1.0"
-edition = "2024"
+version = "1.0.0"
+edition = "2021"
+authors = ["VEDA Core Team"]
+description = "Adaptive parallel runtime for Rust with heterogeneous compute support"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/veda-rs/veda"
+readme = "README.md"
+keywords = ["parallel", "concurrency", "async", "gpu", "rayon"]
+categories = ["concurrency", "asynchronous"]
 
 [dependencies]
+# Core concurrency
+crossbeam-deque = "0.8"
+crossbeam-utils = "0.8"
+crossbeam-channel = "0.5"
+num_cpus = "1.16"
+
+# Async support (optional)
+futures = { version = "0.3", optional = true }
+async-channel = { version = "2.0", optional = true }
+
+# GPU support (optional)
+wgpu = { version = "0.19", optional = true }
+
+# Telemetry (optional)
+hdrhistogram = { version = "7.5", optional = true }
+
+# Serialization for deterministic mode and telemetry export
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0" }
+
+# Random number generation (required for work stealing)
+rand = "0.8"
+rand_pcg = { version = "0.3", optional = true }
+
+# Error handling
+thiserror = "1.0"
+
+# Parking for thread synchronization
+parking_lot = "0.12"
+
+# NUMA support (Linux-specific)
+[target.'cfg(target_os = "linux")'.dependencies]
+libnuma = { version = "0.0.4", optional = true }
+
+[dev-dependencies]
+criterion = "0.5"
+tokio = { version = "1.35", features = ["full"] }
+rayon = "1.8"
+proptest = "1.4"
+
+[features]
+default = ["adaptive", "telemetry"]
+
+# Core features
+adaptive = []
+deterministic = ["rand_pcg"]
+telemetry = ["hdrhistogram"]
+
+# Hardware features
+gpu = ["wgpu"]
+numa = ["libnuma"]
+
+# Integration features
+async = ["futures", "async-channel"]
+tokio-compat = ["async"]
+
+# Advanced features
+energy-aware = []
+custom-allocators = []
