@@ -61,7 +61,7 @@ libnuma = { version = "0.0.4", optional = true }
 libc = "0.2"
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = "0.7"
 tokio = { version = "1.35", features = ["full"] }
 rayon = "1.8"
 proptest = "1.4"
