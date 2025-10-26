@@ -1,0 +1,33 @@
+version: 2
+updates:
+  # Keep Rust dependencies up to date
+  - package-ecosystem: "cargo"
+    directory: "/"                    # root of the repo where Cargo.toml lives
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "automated-update"
+    # you can ignore specific dependencies if needed
+    # ignore:
+    #   - dependency-name: "some-crate"
+    #     versions: ["<1.2.3"]
+    
+  # Keep GitHub Actions up to date
+  - package-ecosystem: "github-actions"
+    directory: "/.github/workflows"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    labels:
+      - "ci"
+      - "actions-update"
+
+  # Optionally keep the Rust toolchain version (rust-toolchain file) updated
+  - package-ecosystem: "rust-toolchain"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "toolchain"
