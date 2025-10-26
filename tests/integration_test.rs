@@ -1,5 +1,3 @@
-//! Integration tests for VEDA runtime
-
 use veda_rs::prelude::*;
 
 #[test]
@@ -15,7 +13,7 @@ fn test_parallel_sum() {
     veda_rs::init().unwrap();
     
     let sum: i32 = (0i32..1000i32).into_par_iter().sum();
-    assert_eq!(sum, 499_500);
+    assert_eq!(sum, 499500);
     
     veda_rs::shutdown();
 }
@@ -64,7 +62,7 @@ fn test_parallel_fold() {
         .fold(|| 1i64, |acc, x| acc * x)
         .sum();
     
-    assert_eq!(product, 120); // 5!
+    assert_eq!(product, 120);
     
     veda_rs::shutdown();
 }
@@ -121,7 +119,7 @@ fn test_nested_parallelism() {
         .map(|i| {
             (0i32..10i32)
                 .into_par_iter()
-                .map(|j| i * 10 + j)
+                .map(move |j| i * 10 + j)
                 .collect()
         })
         .collect();
@@ -143,7 +141,7 @@ fn test_large_workload() {
         .map(|x| x as i64)
         .sum();
     
-    assert_eq!(sum, 499_999_500_000);
+    assert_eq!(sum, 499999500000);
     
     veda_rs::shutdown();
 }

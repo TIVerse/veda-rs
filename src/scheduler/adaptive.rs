@@ -1,6 +1,3 @@
-//! Adaptive scheduling algorithm that adjusts worker count and load balancing
-//! based on real-time system metrics.
-
 use super::{LoadStatistics, WorkerId, WorkerState};
 use crate::config::Config;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
@@ -8,7 +5,6 @@ use std::sync::Arc;
 use std::time::Instant;
 use parking_lot::RwLock;
 
-/// Adaptive scheduler that dynamically adjusts to workload characteristics
 pub struct AdaptiveScheduler {
     worker_states: Vec<Arc<RwLock<WorkerState>>>,
     load_estimator: LoadEstimator,
@@ -51,7 +47,6 @@ impl AdaptiveScheduler {
         }
     }
     
-    /// Check if rebalancing is needed and perform it
     pub fn maybe_rebalance(&self) -> bool {
         let stats = self.collect_statistics();
         
@@ -64,7 +59,6 @@ impl AdaptiveScheduler {
         }
     }
     
-    /// Collect current load statistics from all workers
     pub fn collect_statistics(&self) -> LoadStatistics {
         let worker_loads: Vec<f64> = self.worker_states
             .iter()
@@ -106,52 +100,39 @@ impl AdaptiveScheduler {
             std_dev,
             avg_utilization,
             task_arrival_rate: self.load_estimator.arrival_rate(),
-            avg_queue_wait_time_ns: 0, // TODO: track queue wait times
+            avg_queue_wait_time_ns: 0,
             timestamp: Instant::now(),
         }
     }
     
-    /// Detect if the workload is imbalanced
     fn detect_imbalance(&self, stats: &LoadStatistics) -> bool {
-        // Use coefficient of variation to detect imbalance
         let cv = stats.coefficient_of_variation();
         cv > self.config.imbalance_threshold
     }
     
-    /// Perform load rebalancing
-    fn rebalance(&self, _stats: &LoadStatistics) {
-        // In a real implementation, this would trigger task migration
-        // For now, work stealing handles this naturally
-    }
+    fn rebalance(&self, _stats: &LoadStatistics) {}
     
-    /// Compute optimal number of workers based on current load
     pub fn compute_optimal_workers(&self, stats: &LoadStatistics) -> usize {
-        // Simple heuristic based on utilization
         if stats.avg_utilization < 0.5 {
-            // Under-utilized: consider reducing workers (but we keep them for now)
             self.worker_states.len().max(self.config.min_workers)
         } else if stats.avg_utilization > 0.9 {
-            // Over-utilized: would benefit from more workers (if available)
             (self.worker_states.len() * 5 / 4).min(self.config.max_workers)
         } else {
             self.worker_states.len()
         }
     }
     
-    /// Get reference to worker state
     pub fn worker_state(&self, id: WorkerId) -> Option<Arc<RwLock<WorkerState>>> {
         self.worker_states.get(id.0).cloned()
     }
     
-    /// Get number of workers
     pub fn num_workers(&self) -> usize {
         self.worker_states.len()
     }
 }
 
-/// Load estimator using exponential moving average
 pub struct LoadEstimator {
-    estimate: AtomicU64, // Stored as u64, interpreted as f64 bits
+    estimate: AtomicU64,
     last_update: RwLock<Instant>,
     task_count: AtomicU64,
 }
@@ -165,26 +146,22 @@ impl LoadEstimator {
         }
     }
     
-    /// Update load estimate with new measurement
     pub fn update(&self, current_load: f64) {
-        let alpha = 0.3; // Smoothing factor
+        let alpha = 0.3;
         let old_estimate = f64::from_bits(self.estimate.load(Ordering::Relaxed));
         let new_estimate = alpha * current_load + (1.0 - alpha) * old_estimate;
         self.estimate.store(new_estimate.to_bits(), Ordering::Relaxed);
         *self.last_update.write() = Instant::now();
     }
     
-    /// Get current load estimate
     pub fn estimate(&self) -> f64 {
         f64::from_bits(self.estimate.load(Ordering::Relaxed))
     }
     
-    /// Record a task arrival
     pub fn record_task(&self) {
         self.task_count.fetch_add(1, Ordering::Relaxed);
     }
     
-    /// Get task arrival rate (tasks per second)
     pub fn arrival_rate(&self) -> f64 {
         let elapsed = self.last_update.read().elapsed().as_secs_f64();
         if elapsed == 0.0 {

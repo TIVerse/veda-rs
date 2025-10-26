@@ -1,14 +1,14 @@
 //! Scoped parallelism example - safe task spawning with lifetimes
 
-use veda::prelude::*;
-use veda::scope;
+use veda_rs::prelude::*;
+use veda_rs::scope;
 use std::sync::Arc;
 use parking_lot::Mutex;
 
 fn main() {
     println!("=== Scoped Parallelism Example ===\n");
     
-    veda::init().expect("Failed to initialize VEDA");
+    veda_rs::init().expect("Failed to initialize VEDA");
     
     // Example 1: Mutable access to local data
     let mut data = vec![0; 100];
@@ -47,21 +47,22 @@ fn main() {
         }
         
         fn sum_parallel(&self) -> i32 {
-            let mut total = self.value;
+            use std::sync::Arc;
+            use parking_lot::Mutex;
+            
+            let total = Arc::new(Mutex::new(self.value));
             
             scope::scope(|s| {
-                let results: Vec<_> = self.children.iter()
-                    .map(|child| {
-                        s.spawn(move || child.sum_parallel())
-                    })
-                    .collect();
-                
-                for handle in results {
-                    total += handle.join().unwrap_or(0);
+                for child in &self.children {
+                    let total_ref = total.clone();
+                    let child_sum = child.sum_parallel();
+                    s.spawn(move || {
+                        *total_ref.lock() += child_sum;
+                    });
                 }
             });
             
-            total
+            Arc::try_unwrap(total).unwrap().into_inner()
         }
     }
     
@@ -78,6 +79,6 @@ fn main() {
     let sum = tree.sum_parallel();
     println!("Tree sum: {} (expected: 28)", sum);
     
-    veda::shutdown();
+    veda_rs::shutdown();
     println!("\n=== Example Complete ===");
 }

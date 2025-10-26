@@ -1,91 +1,77 @@
-# Contributing to VEDA
+# Contributing
 
-Thank you for your interest in contributing to VEDA! This document provides guidelines and information for contributors.
+Thanks for considering contributing to VEDA.
 
 ## Code of Conduct
 
-This project adheres to a code of conduct. By participating, you are expected to uphold this code. Please be respectful and constructive in all interactions.
+Be respectful and constructive.
 
 ## How to Contribute
 
 ### Reporting Bugs
 
-When reporting bugs, please include:
-- VEDA version
-- Operating system and architecture
-- Minimal reproduction case
+Include:
+- Version
+- OS and architecture
+- Minimal repro
 - Expected vs actual behavior
-- Any error messages or panics
+- Error messages
 
 ### Suggesting Features
 
-Feature requests should include:
-- Use case description
-- Proposed API design
-- Performance considerations
-- Compatibility impact
+Include:
+- Use case
+- Proposed API
+- Performance impact
 
 ### Pull Requests
 
-1. **Fork and Branch**: Create a feature branch from `main`
-2. **Write Tests**: All new features must include tests
-3. **Document**: Add documentation for public APIs
-4. **Benchmark**: Include benchmarks for performance-critical code
-5. **Format**: Run `cargo fmt` before committing
-6. **Lint**: Ensure `cargo clippy` passes
-7. **PR**: Submit pull request with clear description
+1. Fork and create a branch from `main`
+2. Write tests
+3. Document public APIs
+4. Run `cargo fmt`
+5. Make sure `cargo clippy` passes
+6. Submit PR
 
 ## Development Setup
 
 ```bash
-# Clone the repository
 git clone https://github.com/veda-rs/veda
 cd veda
-
-# Build the project
 cargo build
-
-# Run tests
 cargo test
-
-# Run benchmarks
 cargo bench
-
-# Check formatting
 cargo fmt --check
-
-# Run clippy
 cargo clippy --all-features -- -D warnings
 ```
 
 ## Code Style
 
-- Follow Rust standard style (enforced by rustfmt)
-- Use meaningful variable and function names
-- Prefer explicitness over brevity
-- Add comments for complex algorithms
-- Document all public APIs
+- Follow rustfmt
+- Use meaningful names
+- Comment complex code
+- Document public APIs
 
 ## Testing
 
-- Write unit tests for individual functions
-- Write integration tests for feature combinations
-- Add stress tests for concurrency issues
-- Ensure tests are deterministic and don't flake
+- Write unit tests
+- Write integration tests
+- Add stress tests for concurrency
+- Make tests deterministic
 
 ## Performance
 
-- Benchmark performance-critical code
+- Benchmark perf-critical code
 - Avoid allocations in hot paths
-- Profile before optimizing
-- Document performance characteristics
+- Profile first
+- Document perf characteristics
 
 ## Documentation
 
-- All public items must have documentation
-- Examples in documentation must compile and run
-- Update README.md for user-facing changes
-- Add examples for new features
+- Document public items
+- Make sure doc examples compile
+- Update README for user-facing changes
+- Add examples
 
 ## License
 

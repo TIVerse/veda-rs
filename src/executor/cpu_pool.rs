@@ -1,7 +1,3 @@
-//! CPU thread pool implementation.
-//!
-//! Manages a pool of worker threads that execute tasks using work-stealing.
-
 use super::task::Task;
 use super::worker::{Worker, WorkerId};
 use crate::config::Config;
@@ -11,7 +7,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 
-/// CPU thread pool for executing tasks
 pub struct CpuPool {
     workers: Vec<WorkerHandle>,
     injector: Arc<Injector<Task>>,
@@ -27,18 +22,15 @@ struct WorkerHandle {
 }
 
 impl CpuPool {
-    /// Create a new CPU pool with the given configuration
     pub fn new(config: &Config) -> Result<Self> {
         let num_threads = config.worker_threads();
-        
         if num_threads == 0 {
-            return Err(Error::config("num_threads must be > 0"));
+            return Err(Error::config("need at least 1 thread"));
         }
         
         let injector = Arc::new(Injector::new());
         let shutdown = Arc::new(AtomicBool::new(false));
         
-        // Create workers
         let mut workers = Vec::with_capacity(num_threads);
         let mut stealers = Vec::with_capacity(num_threads);
         
@@ -48,7 +40,6 @@ impl CpuPool {
             workers.push(worker);
         }
         
-        // Start worker threads
         let mut handles = Vec::with_capacity(num_threads);
         
         for worker in workers {
@@ -66,7 +57,7 @@ impl CpuPool {
             
             let thread = builder.spawn(move || {
                 worker.run(stealers_clone, injector_clone, shutdown_clone);
-            }).map_err(|e| Error::executor(format!("failed to spawn worker thread: {}", e)))?;
+            }).map_err(|e| Error::executor(format!("spawn failed: {}", e)))?;
             
             let unparker = thread.thread().clone();
             
@@ -86,18 +77,15 @@ impl CpuPool {
         })
     }
     
-    /// Submit a task to the pool
     pub fn submit(&self, task: Task) {
         self.injector.push(task);
         
-        // Unpark a random worker to handle the task
-        // This is a simple strategy - could be improved with better scheduling
+        // wake up a worker
         if let Some(worker) = self.workers.get(self.num_threads / 2) {
             worker.unparker.unpark();
         }
     }
     
-    /// Execute a function on the pool
     pub fn execute<F>(&self, f: F)
     where
         F: FnOnce() + Send + 'static,
@@ -106,21 +94,18 @@ impl CpuPool {
         self.submit(task);
     }
     
-    /// Get number of worker threads
     pub fn num_threads(&self) -> usize {
         self.num_threads
     }
     
-    /// Shutdown the pool and wait for all workers to finish
     pub fn shutdown(&mut self) {
         self.shutdown.store(true, Ordering::Release);
         
-        // Unpark all workers so they can see the shutdown signal
+        // wake everyone up to check shutdown flag
         for worker in &self.workers {
             worker.unparker.unpark();
         }
         
-        // Wait for all threads to finish
         for worker in &mut self.workers {
             if let Some(thread) = worker.thread.take() {
                 let _ = thread.join();

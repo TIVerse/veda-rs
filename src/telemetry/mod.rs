@@ -1,8 +1,3 @@
-//! Telemetry and observability subsystem.
-//!
-//! Provides metrics collection, tracing, and export capabilities for
-//! monitoring runtime performance and behavior.
-
 #[cfg(feature = "telemetry")]
 pub mod metrics;
 
@@ -27,7 +22,6 @@ pub use export::{MetricsExporter, JsonExporter};
 #[cfg(feature = "telemetry")]
 pub use feedback::FeedbackController;
 
-// Stub implementations when telemetry is disabled
 #[cfg(not(feature = "telemetry"))]
 pub mod metrics {
     use std::time::Instant;

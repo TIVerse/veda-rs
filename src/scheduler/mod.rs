@@ -1,9 +1,3 @@
-//! Adaptive task scheduling subsystem.
-//!
-//! The scheduler is responsible for deciding which tasks run where and when,
-//! implementing various scheduling policies including adaptive load balancing,
-//! work stealing, priority scheduling, and energy-aware scheduling.
-
 pub mod adaptive;
 pub mod work_stealing;
 pub mod priority;
@@ -28,12 +22,9 @@ use crate::executor::Task;
 use crate::error::Result;
 use std::time::Instant;
 
-/// Unique identifier for a worker thread
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "deterministic", derive(serde::Serialize, serde::Deserialize))]
 pub struct WorkerId(pub usize);
-
-/// Worker state for load tracking
 #[derive(Debug, Clone)]
 pub struct WorkerState {
     pub id: WorkerId,
@@ -65,7 +56,6 @@ impl WorkerState {
     }
 }
 
-/// Load statistics for the scheduler
 #[derive(Debug, Clone)]
 pub struct LoadStatistics {
     pub mean_load: f64,

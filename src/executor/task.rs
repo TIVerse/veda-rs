@@ -1,12 +1,7 @@
-//! Task representation and execution.
-
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
-/// Global task ID counter
 static TASK_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
-
-/// Unique identifier for a task
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TaskId(u64);
 
@@ -16,7 +11,6 @@ impl TaskId {
     }
 }
 
-/// Priority level for task scheduling
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Priority {
     Realtime = 0,
@@ -32,7 +26,6 @@ impl Default for Priority {
     }
 }
 
-/// Internal task representation
 pub(crate) struct Task {
     pub(crate) id: TaskId,
     pub(crate) func: Box<dyn FnOnce() + Send + 'static>,
@@ -41,7 +34,6 @@ pub(crate) struct Task {
 }
 
 impl Task {
-    /// Create a new task with normal priority
     pub fn new<F>(f: F) -> Self
     where
         F: FnOnce() + Send + 'static,
@@ -54,7 +46,6 @@ impl Task {
         }
     }
     
-    /// Create a task with specific priority
     pub fn with_priority<F>(f: F, priority: Priority) -> Self
     where
         F: FnOnce() + Send + 'static,
@@ -67,7 +58,6 @@ impl Task {
         }
     }
     
-    /// Execute the task
     pub fn execute(self) {
         (self.func)();
     }

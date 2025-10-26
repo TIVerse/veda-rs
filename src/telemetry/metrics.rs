@@ -1,36 +1,24 @@
-//! Metrics collection for runtime monitoring.
-
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 use hdrhistogram::Histogram;
 use parking_lot::RwLock;
 
-/// Runtime metrics collector
 #[derive(Debug)]
 pub struct Metrics {
-    // Task counters
     tasks_executed: AtomicU64,
     tasks_stolen: AtomicU64,
     tasks_panicked: AtomicU64,
     
-    // Timing metrics
     idle_time_ns: AtomicU64,
     busy_time_ns: AtomicU64,
     
-    // Latency histogram (protected by RwLock for interior mutability)
     latency_histogram: RwLock<Histogram<u64>>,
-    
-    // Memory metrics
     memory_allocated: AtomicU64,
-    
-    // Creation time
     start_time: Instant,
 }
 
 impl Metrics {
-    /// Create a new metrics collector
     pub fn new() -> Self {
-        // Create histogram with 3 significant figures and max value of 1 hour in nanoseconds
         let histogram = Histogram::new_with_max(3_600_000_000_000, 3)
             .expect("Failed to create histogram");
         
@@ -46,42 +34,33 @@ impl Metrics {
         }
     }
     
-    /// Record a task execution with duration
     pub fn record_task_execution(&self, duration_ns: u64) {
         self.tasks_executed.fetch_add(1, Ordering::Relaxed);
-        
-        // Record latency in histogram
         if let Some(mut hist) = self.latency_histogram.try_write() {
             let _ = hist.record(duration_ns);
         }
     }
     
-    /// Record a stolen task
     pub fn record_task_stolen(&self) {
         self.tasks_stolen.fetch_add(1, Ordering::Relaxed);
     }
     
-    /// Record a task panic
     pub fn record_task_panic(&self) {
         self.tasks_panicked.fetch_add(1, Ordering::Relaxed);
     }
     
-    /// Record idle time
     pub fn record_idle_time(&self, duration_ns: u64) {
         self.idle_time_ns.fetch_add(duration_ns, Ordering::Relaxed);
     }
     
-    /// Record busy time
     pub fn record_busy_time(&self, duration_ns: u64) {
         self.busy_time_ns.fetch_add(duration_ns, Ordering::Relaxed);
     }
     
-    /// Record memory allocation
     pub fn record_allocation(&self, bytes: usize) {
         self.memory_allocated.fetch_add(bytes as u64, Ordering::Relaxed);
     }
     
-    /// Get a snapshot of current metrics
     pub fn snapshot(&self) -> MetricsSnapshot {
         let histogram = self.latency_histogram.read();
         
@@ -106,7 +85,6 @@ impl Metrics {
         }
     }
     
-    /// Reset all metrics
     pub fn reset(&self) {
         self.tasks_executed.store(0, Ordering::Relaxed);
         self.tasks_stolen.store(0, Ordering::Relaxed);
@@ -127,7 +105,6 @@ impl Default for Metrics {
     }
 }
 
-/// Snapshot of metrics at a point in time
 #[derive(Debug, Clone)]
 pub struct MetricsSnapshot {
     pub timestamp: Instant,
@@ -146,7 +123,6 @@ pub struct MetricsSnapshot {
 }
 
 impl MetricsSnapshot {
-    /// Calculate overall utilization (0.0 to 1.0)
     pub fn utilization(&self) -> f64 {
         let total_time = self.idle_time_ns + self.busy_time_ns;
         if total_time == 0 {
@@ -155,7 +131,6 @@ impl MetricsSnapshot {
         self.busy_time_ns as f64 / total_time as f64
     }
     
-    /// Calculate tasks per second
     pub fn tasks_per_second(&self) -> f64 {
         let seconds = self.uptime.as_secs_f64();
         if seconds == 0.0 {

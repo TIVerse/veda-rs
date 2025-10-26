@@ -5,30 +5,20 @@
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE)
 [![CI](https://github.com/veda-rs/veda/workflows/CI/badge.svg)](https://github.com/veda-rs/veda/actions)
 
-A next-generation parallel runtime library for Rust that combines **adaptive scheduling**, **heterogeneous compute support**, and **comprehensive observability**. VEDA is designed as a complete evolution of Rayon, addressing modern application demands while maintaining zero-cost abstractions and memory safety.
+A parallel runtime library for Rust with adaptive scheduling and work-stealing. Designed to be mostly compatible with Rayon but with better handling of variable workloads.
 
-## 🚀 Features
+## Features
 
-### Core Capabilities
+- Adaptive thread pools with dynamic worker scaling
+- Work stealing scheduler
+- Rayon-compatible API for parallel iterators
+- Scoped parallelism support
+- Optional telemetry and metrics
+- Optional deterministic execution mode
+- GPU support (experimental)
+- Async/await integration
 
-- **🔄 Adaptive Thread Pools**: Dynamic worker scaling based on load and system metrics
-- **⚡ Work Stealing 2.0**: Improved algorithm with NUMA awareness and locality optimization
-- **🎯 Rayon Compatibility**: Drop-in replacement for Rayon's parallel iterators
-- **🔒 Scoped Parallelism**: Safe task spawning with lifetime guarantees
-- **📊 Rich Telemetry**: Per-task metrics, latency histograms, resource tracking (optional)
-- **🔁 Deterministic Mode**: Reproducible execution for testing and debugging (optional)
-
-### Advanced Features
-
-- **🖥️ GPU Support**: Automatic CPU/GPU task distribution via wgpu (optional)
-- **⚡ Async Integration**: Seamless async/await support with Tokio bridge (optional)
-- **🔋 Energy-Aware Scheduling**: Power consumption and thermal throttling awareness (optional)
-- **🧠 NUMA Support**: NUMA-aware memory allocation and worker pinning (optional)
-- **🎚️ Priority Queues**: Task prioritization with deadline scheduling
-- **🛡️ Panic Isolation**: Task-level fault tolerance with recovery strategies
-- **📝 Custom Allocators**: Per-thread memory pools with configurable strategies
-
-## 📦 Installation
+## Installation
 
 Add VEDA to your `Cargo.toml`:
 
@@ -54,7 +44,7 @@ Available features:
 - `energy-aware` - Energy-efficient scheduling
 - `custom-allocators` - Custom memory allocators
 
-## 🎯 Quick Start
+## Quick Start
 
 ### Basic Parallel Iterator
 
@@ -62,18 +52,14 @@ Available features:
 use veda::prelude::*;
 
 fn main() {
-    // Initialize the runtime
     veda::init().unwrap();
     
-    // Parallel sum - identical to Rayon API
     let sum: i32 = (0..1000)
         .into_par_iter()
         .map(|x| x * 2)
         .sum();
     
     println!("Sum: {}", sum);
-    
-    // Cleanup
     veda::shutdown();
 }
 ```
@@ -91,9 +77,6 @@ fn main() {
         .unwrap();
     
     veda::init_with_config(config).unwrap();
-    
-    // Your parallel code here
-    
     veda::shutdown();
 }
 ```
@@ -116,13 +99,13 @@ fn main() {
                 }
             });
         }
-    }); // All spawned tasks complete here
+    });
     
     veda::shutdown();
 }
 ```
 
-## 📚 Examples
+## Examples
 
 See the [`examples/`](examples/) directory for more comprehensive examples:
 
@@ -138,11 +121,9 @@ Run an example:
 cargo run --example basic_par_iter
 ```
 
-## 🔬 Advanced Usage
+## Advanced Usage
 
 ### Adaptive Scheduling
-
-VEDA automatically adjusts to workload characteristics:
 
 ```rust
 let config = Config::builder()
@@ -152,7 +133,6 @@ let config = Config::builder()
 
 veda::init_with_config(config).unwrap();
 
-// Runtime adapts to variable workload automatically
 let results: Vec<_> = (0..10000)
     .into_par_iter()
     .map(|i| expensive_computation(i))
@@ -160,8 +140,6 @@ let results: Vec<_> = (0..10000)
 ```
 
 ### Deterministic Execution
-
-For reproducible debugging and testing:
 
 ```rust
 #[cfg(feature = "deterministic")]
@@ -172,15 +150,11 @@ For reproducible debugging and testing:
         .unwrap();
     
     veda::init_with_config(config).unwrap();
-    
-    // Execution order is deterministic with same seed
     let result = (0..1000).into_par_iter().map(|x| x * x).sum();
 }
 ```
 
 ### GPU Offloading
-
-Automatic CPU/GPU task distribution (requires `gpu` feature):
 
 ```rust
 #[cfg(feature = "gpu")]
@@ -192,26 +166,21 @@ Automatic CPU/GPU task distribution (requires `gpu` feature):
 }
 ```
 
-### Telemetry and Metrics
-
-Monitor runtime performance (requires `telemetry` feature):
+### Telemetry
 
 ```rust
 #[cfg(feature = "telemetry")]
 {
     use veda::telemetry::export::{ConsoleExporter, MetricsExporter};
     
-    // Get metrics snapshot
     let metrics = veda::telemetry::metrics::Metrics::default();
     let snapshot = metrics.snapshot();
-    
-    // Export to console
     let exporter = ConsoleExporter::new(true);
     exporter.export(&snapshot)?;
 }
 ```
 
-## 🏗️ Architecture
+## Architecture
 
 VEDA is built with a modular architecture:
 
@@ -245,9 +214,9 @@ VEDA is built with a modular architecture:
 └───────────────────────────────────────────────────────────────┘
 ```
 
-## 📊 Performance
+## Performance
 
-VEDA aims to match or exceed Rayon's performance on uniform workloads while significantly outperforming it on variable workloads:
+Benchmarks show similar performance to Rayon on uniform workloads, with better performance on variable workloads:
 
 | Workload Type | VEDA vs Rayon | Notes |
 |---------------|---------------|-------|
@@ -262,15 +231,12 @@ Run benchmarks:
 cargo bench
 ```
 
-## 🧪 Testing
+## Testing
 
 VEDA includes comprehensive test coverage:
 
 ```bash
-# Run unit tests
 cargo test
-
-# Run integration tests
 cargo test --test integration_test
 
 # Run stress tests (long-running)
@@ -280,7 +246,7 @@ cargo test --test stress_test -- --ignored
 cargo test --all-features
 ```
 
-## 🔄 Migration from Rayon
+## Migration from Rayon
 
 VEDA is designed as a drop-in replacement for Rayon:
 
@@ -309,7 +275,7 @@ The main differences:
 2. Additional configuration options available
 3. Optional features for advanced capabilities
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
@@ -320,7 +286,7 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for gui
 - Documentation improvements
 - More examples and use cases
 
-## 📄 License
+## License
 
 VEDA is dual-licensed under either:
 
@@ -329,7 +295,7 @@ VEDA is dual-licensed under either:
 
 at your option.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 VEDA builds upon the foundational work of:
 - **Rayon** - pioneering work in Rust data parallelism
@@ -337,35 +303,24 @@ VEDA builds upon the foundational work of:
 - **Crossbeam** - lock-free data structures
 - **wgpu** - modern GPU abstraction
 
-## 📞 Contact and Support
+## Contact
 
 - **Documentation**: https://docs.rs/veda-rs
 - **Repository**: https://github.com/veda-rs/veda
 - **Issues**: https://github.com/veda-rs/veda/issues
 - **Discussions**: https://github.com/veda-rs/veda/discussions
 
-## 🗺️ Roadmap
+## Roadmap
 
-### Version 1.0.0 (Current)
-- ✅ Adaptive thread pool with work stealing
-- ✅ Rayon-compatible API surface
-- ✅ Basic telemetry and metrics
-- ✅ Panic isolation
-- ✅ Deterministic mode
-- ✅ Comprehensive test suite
+Current:
+- Adaptive thread pool
+- Rayon-compatible API
+- Basic telemetry
+- Panic isolation
+- Deterministic mode
 
-### Version 1.1.0 (Planned)
-- GPU compute support (wgpu integration)
-- Advanced telemetry exporters
+Planned:
+- GPU compute support
 - Energy-aware scheduling
-- Custom allocator support
-
-### Version 1.2.0 (Future)
-- NUMA-aware memory allocation
-- Priority-based scheduling
-- Real-time telemetry dashboard
-- Plugin architecture for custom schedulers
-
----
-
-**Made with ❤️ by the VEDA Core Team**
+- NUMA support
+- Better telemetry

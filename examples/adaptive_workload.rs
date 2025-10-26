@@ -1,6 +1,6 @@
 //! Adaptive workload example - demonstrates dynamic load balancing
 
-use veda::prelude::*;
+use veda_rs::prelude::*;
 use std::thread;
 use std::time::Duration;
 
@@ -21,18 +21,18 @@ fn main() {
     println!("=== Adaptive Workload Example ===\n");
     
     // Configure with adaptive scheduling
-    let config = veda::Config::builder()
-        .scheduling_policy(veda::SchedulingPolicy::Adaptive)
+    let config = veda_rs::Config::builder()
+        .scheduling_policy(veda_rs::SchedulingPolicy::Adaptive)
         .num_threads(4)
         .build()
         .expect("Failed to build config");
     
-    veda::init_with_config(config).expect("Failed to initialize");
+    veda_rs::init_with_config(config).expect("Failed to initialize");
     
     println!("Processing variable workload with adaptive scheduling...");
     let start = std::time::Instant::now();
     
-    let results: Vec<usize> = (0..1000)
+    let results: Vec<usize> = (0usize..1000usize)
         .into_par_iter()
         .map(variable_workload)
         .collect();
@@ -45,15 +45,15 @@ fn main() {
     // Get runtime metrics if telemetry is enabled
     #[cfg(feature = "telemetry")]
     {
-        use veda::telemetry::export::{ConsoleExporter, MetricsExporter};
+        use veda_rs::telemetry::export::{ConsoleExporter, MetricsExporter};
         
         println!("\n--- Runtime Metrics ---");
-        let metrics = veda::telemetry::metrics::Metrics::default();
+        let metrics = veda_rs::telemetry::metrics::Metrics::default();
         let snapshot = metrics.snapshot();
         let exporter = ConsoleExporter::new(true);
         let _ = exporter.export(&snapshot);
     }
     
-    veda::shutdown();
+    veda_rs::shutdown();
     println!("\n=== Example Complete ===");
 }

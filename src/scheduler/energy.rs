@@ -1,30 +1,20 @@
-//! Energy-aware scheduling for power-constrained environments.
-
 use super::WorkerState;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 use parking_lot::RwLock;
 
-/// Execution mode for tasks
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExecutionMode {
-    /// Normal CPU execution
     CpuNormal,
-    /// CPU execution with throttling
     CpuThrottled,
-    /// GPU execution (if available)
     #[cfg(feature = "gpu")]
     Gpu,
 }
 
-/// Energy-aware scheduler configuration
 #[derive(Debug, Clone)]
 pub struct EnergyConfig {
-    /// Maximum power consumption in watts
     pub max_watts: f64,
-    /// Maximum temperature in Celsius
     pub max_temp_celsius: f64,
-    /// Enable dynamic frequency scaling
     pub enable_dvfs: bool,
 }
 
@@ -38,10 +28,9 @@ impl Default for EnergyConfig {
     }
 }
 
-/// Thermal state monitoring
 #[derive(Debug)]
 pub struct ThermalState {
-    current_temp: AtomicU64, // Stored as f64 bits
+    current_temp: AtomicU64,
     last_update: RwLock<Instant>,
 }
 
@@ -53,7 +42,6 @@ impl ThermalState {
         }
     }
     
-    /// Get current temperature in Celsius
     pub fn temperature(&self) -> f64 {
         f64::from_bits(self.current_temp.load(Ordering::Relaxed))
     }

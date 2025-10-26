@@ -1,37 +1,28 @@
-//! Atomic operations and utilities.
-
 use std::sync::atomic::{AtomicU64, Ordering};
-
-/// Atomic f64 wrapper using bitwise representation
 #[derive(Debug)]
 pub struct AtomicF64 {
     bits: AtomicU64,
 }
 
 impl AtomicF64 {
-    /// Create a new atomic f64 with the given initial value
     pub fn new(value: f64) -> Self {
         Self {
             bits: AtomicU64::new(value.to_bits()),
         }
     }
     
-    /// Load the value
     pub fn load(&self, ordering: Ordering) -> f64 {
         f64::from_bits(self.bits.load(ordering))
     }
     
-    /// Store a value
     pub fn store(&self, value: f64, ordering: Ordering) {
         self.bits.store(value.to_bits(), ordering);
     }
     
-    /// Swap values
     pub fn swap(&self, value: f64, ordering: Ordering) -> f64 {
         f64::from_bits(self.bits.swap(value.to_bits(), ordering))
     }
     
-    /// Compare and swap
     pub fn compare_exchange(
         &self,
         current: f64,
@@ -50,7 +41,6 @@ impl AtomicF64 {
         }
     }
     
-    /// Fetch and add (using compare-exchange loop)
     pub fn fetch_add(&self, value: f64, ordering: Ordering) -> f64 {
         let mut current = self.load(Ordering::Relaxed);
         loop {

@@ -1,5 +1,3 @@
-//! Memory management subsystem for NUMA-aware and efficient allocation.
-
 pub mod allocator;
 pub mod thread_local;
 

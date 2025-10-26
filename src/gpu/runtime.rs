@@ -1,5 +1,3 @@
-//! GPU runtime management using wgpu.
-
 use super::kernel::{GpuKernel, CompiledKernel};
 use super::buffer::BufferPool;
 use crate::error::{Error, Result};
@@ -7,7 +5,6 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 use wgpu;
 
-/// GPU runtime for managing device and queue
 pub struct GpuRuntime {
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
@@ -16,7 +13,6 @@ pub struct GpuRuntime {
 }
 
 impl GpuRuntime {
-    /// Initialize the GPU runtime
     pub async fn new() -> Result<Self> {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),

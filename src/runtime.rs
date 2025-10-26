@@ -1,22 +1,18 @@
-//! Global runtime management.
-//!
-//! VEDA uses a global runtime that can be initialized once and accessed
-//! from anywhere in the program.
-
 use crate::config::Config;
 use crate::error::{Error, Result};
 use crate::executor::CpuPool;
 use parking_lot::RwLock;
 use std::sync::Arc;
+use std::sync::{Mutex, OnceLock};
+use std::collections::HashMap;
+use std::thread::ThreadId;
 
-/// The global VEDA runtime.
 pub struct Runtime {
     pub(crate) pool: Arc<CpuPool>,
     config: Config,
 }
 
 impl Runtime {
-    /// Create a new runtime with the given configuration
     pub fn new(config: Config) -> Result<Self> {
         config.validate()?;
         
@@ -28,85 +24,113 @@ impl Runtime {
         })
     }
     
-    /// Get the runtime configuration
     pub fn config(&self) -> &Config {
         &self.config
     }
 }
 
-// Global runtime state
-static RUNTIME: RwLock<Option<Arc<Runtime>>> = RwLock::new(None);
+// Global runtime for simple API
+static GLOBAL_RUNTIME: RwLock<Option<Arc<Runtime>>> = RwLock::new(None);
 
-/// Initialize the VEDA runtime with default configuration.
-///
-/// # Errors
-///
-/// Returns an error if the runtime is already initialized.
-///
-/// # Examples
-///
-/// ```no_run
-/// use veda;
-///
-/// veda::init().unwrap();
-///
-/// // Now you can use parallel operations
-/// ```
+// Thread-local runtime for isolated tests
+thread_local! {
+    static THREAD_RUNTIME: std::cell::RefCell<Option<Arc<Runtime>>> = std::cell::RefCell::new(None);
+}
+
+// Track which threads have thread-local runtimes
+static THREAD_RUNTIME_MAP: OnceLock<Mutex<HashMap<ThreadId, bool>>> = OnceLock::new();
+
+fn get_thread_runtime_map() -> &'static Mutex<HashMap<ThreadId, bool>> {
+    THREAD_RUNTIME_MAP.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
 pub fn init() -> Result<()> {
     init_with_config(Config::default())
 }
 
-/// Initialize the VEDA runtime with custom configuration.
-///
-/// # Errors
-///
-/// Returns an error if the runtime is already initialized or if the
-/// configuration is invalid.
-///
-/// # Examples
-///
-/// ```no_run
-/// use veda::{Config, SchedulingPolicy};
-///
-/// let config = Config::builder()
-///     .num_threads(4)
-///     .scheduling_policy(SchedulingPolicy::Adaptive)
-///     .build()
-///     .unwrap();
-///
-/// veda::init_with_config(config).unwrap();
-/// ```
 pub fn init_with_config(config: Config) -> Result<()> {
-    let mut runtime = RUNTIME.write();
+    let thread_id = std::thread::current().id();
     
-    if runtime.is_some() {
+    // Check if this thread already has a thread-local runtime
+    let has_thread_local = get_thread_runtime_map().lock().unwrap()
+        .get(&thread_id)
+        .copied()
+        .unwrap_or(false);
+    
+    if has_thread_local {
+        // Use thread-local runtime
+        let has_existing = THREAD_RUNTIME.with(|rt| rt.borrow().is_some());
+        if has_existing {
+            return Err(Error::AlreadyInitialized);
+        }
+        
+        let rt = Runtime::new(config)?;
+        THREAD_RUNTIME.with(|rt_cell| {
+            *rt_cell.borrow_mut() = Some(Arc::new(rt));
+        });
+        
+        Ok(())
+    } else {
+        // Use global runtime
+        let mut runtime = GLOBAL_RUNTIME.write();
+        
+        if runtime.is_some() {
+            return Err(Error::AlreadyInitialized);
+        }
+        
+        let rt = Runtime::new(config)?;
+        *runtime = Some(Arc::new(rt));
+        
+        Ok(())
+    }
+}
+
+/// Initialize runtime in thread-local mode (for tests)
+pub fn init_thread_local() -> Result<()> {
+    init_thread_local_with_config(Config::default())
+}
+
+/// Initialize runtime in thread-local mode with config (for tests)
+pub fn init_thread_local_with_config(config: Config) -> Result<()> {
+    let thread_id = std::thread::current().id();
+    get_thread_runtime_map().lock().unwrap().insert(thread_id, true);
+    
+    let has_existing = THREAD_RUNTIME.with(|rt| rt.borrow().is_some());
+    if has_existing {
         return Err(Error::AlreadyInitialized);
     }
     
     let rt = Runtime::new(config)?;
-    *runtime = Some(Arc::new(rt));
+    THREAD_RUNTIME.with(|rt_cell| {
+        *rt_cell.borrow_mut() = Some(Arc::new(rt));
+    });
     
     Ok(())
 }
 
-/// Get a reference to the current runtime.
-///
-/// # Panics
-///
-/// Panics if the runtime has not been initialized.
 pub(crate) fn current_runtime() -> Arc<Runtime> {
-    RUNTIME
-        .read()
-        .as_ref()
-        .expect("VEDA runtime not initialized - call veda::init() first")
-        .clone()
+    let thread_id = std::thread::current().id();
+    let has_thread_local = get_thread_runtime_map().lock().unwrap()
+        .get(&thread_id)
+        .copied()
+        .unwrap_or(false);
+    
+    if has_thread_local {
+        THREAD_RUNTIME.with(|rt| {
+            rt.borrow()
+                .as_ref()
+                .expect("VEDA runtime not initialized - call veda::init() first")
+                .clone()
+        })
+    } else {
+        GLOBAL_RUNTIME
+            .read()
+            .as_ref()
+            .expect("VEDA runtime not initialized - call veda::init() first")
+            .clone()
+    }
 }
 
-/// Execute a function with access to the current runtime.
-///
-/// # Panics
-///
-/// Panics if the runtime has not been initialized.
 pub(crate) fn with_current_runtime<F, R>(f: F) -> R
 where
     F: FnOnce(&Runtime) -> R,
@@ -115,12 +139,22 @@ where
     f(&rt)
 }
 
-/// Shutdown the global runtime.
-///
-/// This will wait for all pending tasks to complete.
 pub fn shutdown() {
-    let mut runtime = RUNTIME.write();
-    *runtime = None;
+    let thread_id = std::thread::current().id();
+    let has_thread_local = get_thread_runtime_map().lock().unwrap()
+        .get(&thread_id)
+        .copied()
+        .unwrap_or(false);
+    
+    if has_thread_local {
+        THREAD_RUNTIME.with(|rt_cell| {
+            *rt_cell.borrow_mut() = None;
+        });
+        get_thread_runtime_map().lock().unwrap().remove(&thread_id);
+    } else {
+        let mut runtime = GLOBAL_RUNTIME.write();
+        *runtime = None;
+    }
 }
 
 #[cfg(test)]
@@ -129,12 +163,11 @@ mod tests {
     
     #[test]
     fn test_runtime_init() {
-        shutdown(); // Clean up any existing runtime
+        shutdown();
         
         let result = init();
         assert!(result.is_ok());
         
-        // Should fail to initialize twice
         let result2 = init();
         assert!(result2.is_err());
         

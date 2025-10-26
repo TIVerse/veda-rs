@@ -1,34 +1,25 @@
-//! Cache line padding to prevent false sharing.
-
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 
-/// Size of a cache line on most modern CPUs
 const CACHE_LINE_SIZE: usize = 64;
-
-/// A value padded to the size of a cache line to prevent false sharing.
 #[repr(align(64))]
 pub struct CachePadded<T> {
     value: T,
 }
 
 impl<T> CachePadded<T> {
-    /// Create a new cache-padded value
     pub const fn new(value: T) -> Self {
         Self { value }
     }
     
-    /// Get a reference to the inner value
     pub fn get(&self) -> &T {
         &self.value
     }
     
-    /// Get a mutable reference to the inner value
     pub fn get_mut(&mut self) -> &mut T {
         &mut self.value
     }
     
-    /// Unwrap the cache-padded value
     pub fn into_inner(self) -> T {
         self.value
     }

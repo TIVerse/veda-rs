@@ -1,14 +1,14 @@
 //! Custom task priorities example
 
-use veda::prelude::*;
-use veda::scope;
-use veda::scheduler::priority::Priority;
+use veda_rs::prelude::*;
+use veda_rs::scope;
+use veda_rs::scheduler::priority::Priority;
 use std::time::Instant;
 
 fn main() {
     println!("=== Custom Task Priorities Example ===\n");
     
-    veda::init().expect("Failed to initialize VEDA");
+    veda_rs::init().expect("Failed to initialize VEDA");
     
     println!("Spawning tasks with different priorities...");
     
@@ -43,6 +43,6 @@ fn main() {
     
     println!("\nAll tasks completed!");
     
-    veda::shutdown();
+    veda_rs::shutdown();
     println!("\n=== Example Complete ===");
 }

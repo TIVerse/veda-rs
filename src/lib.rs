@@ -1,41 +1,6 @@
-//! VEDA - Versatile Execution and Dynamic Adaptation
-//!
-//! A next-generation parallel runtime library for Rust that combines adaptive
-//! scheduling, heterogeneous compute support, and comprehensive observability.
-//!
-//! # Quick Start
-//!
-//! ```no_run
-//! use veda::prelude::*;
-//!
-//! // Initialize the runtime
-//! veda::init().unwrap();
-//!
-//! // Use parallel iterators (Rayon-compatible API)
-//! let sum: i32 = (0..1000)
-//!     .into_par_iter()
-//!     .map(|x| x * 2)
-//!     .sum();
-//!
-//! println!("Sum: {}", sum);
-//! ```
-//!
-//! # Features
-//!
-//! - **Adaptive Thread Pools**: Dynamic worker scaling based on load
-//! - **Work Stealing**: Efficient task distribution with randomized stealing
-//! - **Rayon Compatibility**: Drop-in replacement for Rayon's parallel iterators
-//! - **Scoped Parallelism**: Safe task spawning with lifetime guarantees
-//! - **Telemetry**: Rich metrics and observability (optional)
-//! - **GPU Support**: Automatic CPU/GPU task distribution (optional)
-//! - **Async Integration**: Seamless async/await support (optional)
-//! - **Deterministic Mode**: Reproducible execution for testing (optional)
-
-// Lint configuration
-#![warn(missing_docs, missing_debug_implementations)]
-#![allow(dead_code)] // During development
-
-// Core modules - always available
+// VEDA - parallel runtime for Rust
+// work-stealing task scheduler with rayon-like API
+#![allow(dead_code)]
 pub mod config;
 pub mod error;
 pub mod executor;
@@ -47,7 +12,6 @@ pub mod scope;
 pub mod telemetry;
 pub mod util;
 
-// Optional modules
 #[cfg(feature = "async")]
 pub mod async_bridge;
 
@@ -57,11 +21,10 @@ pub mod gpu;
 #[cfg(feature = "custom-allocators")]
 pub mod memory;
 
-// Re-export key types at crate root
 pub use config::{Config, ConfigBuilder, SchedulingPolicy};
 pub use error::{Error, Result};
 pub use iter::{IntoParallelIterator, ParallelIterator};
-pub use runtime::{init, init_with_config, shutdown};
+pub use runtime::{init, init_with_config, init_thread_local, init_thread_local_with_config, shutdown};
 
 #[cfg(test)]
 mod tests {

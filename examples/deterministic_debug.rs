@@ -1,7 +1,7 @@
 //! Deterministic execution for debugging and testing
 
 #[cfg(feature = "deterministic")]
-use veda::prelude::*;
+use veda_rs::prelude::*;
 
 #[cfg(feature = "deterministic")]
 fn complex_computation(x: i32) -> i32 {
@@ -19,13 +19,13 @@ fn main() {
     let seed = 42;
     
     // Configure deterministic mode
-    let config = veda::Config::builder()
-        .scheduling_policy(veda::SchedulingPolicy::Deterministic { seed })
+    let config = veda_rs::Config::builder()
+        .scheduling_policy(veda_rs::SchedulingPolicy::Deterministic { seed })
         .num_threads(4)
         .build()
         .expect("Failed to build config");
     
-    veda::init_with_config(config).expect("Failed to initialize");
+    veda_rs::init_with_config(config).expect("Failed to initialize");
     
     println!("Running with deterministic seed: {}", seed);
     
@@ -37,16 +37,16 @@ fn main() {
     
     println!("First run complete: {} results", result1.len());
     
-    veda::shutdown();
+    veda_rs::shutdown();
     
     // Run 2 with same seed
-    let config2 = veda::Config::builder()
-        .scheduling_policy(veda::SchedulingPolicy::Deterministic { seed })
+    let config2 = veda_rs::Config::builder()
+        .scheduling_policy(veda_rs::SchedulingPolicy::Deterministic { seed })
         .num_threads(4)
         .build()
         .expect("Failed to build config");
     
-    veda::init_with_config(config2).expect("Failed to initialize");
+    veda_rs::init_with_config(config2).expect("Failed to initialize");
     
     let result2: Vec<i32> = (0..100)
         .into_par_iter()
@@ -65,7 +65,7 @@ fn main() {
         println!("✗ Results differ (this shouldn't happen)");
     }
     
-    veda::shutdown();
+    veda_rs::shutdown();
     println!("\n=== Example Complete ===");
 }
 

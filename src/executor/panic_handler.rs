@@ -1,17 +1,10 @@
-//! Panic isolation and recovery for tasks.
-
 use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-/// Strategy for handling panicked tasks
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PanicStrategy {
-    /// Abort the entire program on panic
     Abort,
-    /// Isolate the panic and continue
     Isolate,
-    /// Log and continue
     LogAndContinue,
 }
 
@@ -21,14 +14,12 @@ impl Default for PanicStrategy {
     }
 }
 
-/// Panic handler for task execution
 pub struct PanicHandler {
     strategy: PanicStrategy,
     panic_count: AtomicUsize,
 }
 
 impl PanicHandler {
-    /// Create a new panic handler
     pub fn new(strategy: PanicStrategy) -> Self {
         Self {
             strategy,
@@ -36,7 +27,6 @@ impl PanicHandler {
         }
     }
     
-    /// Execute a closure with panic handling
     pub fn execute<F, R>(&self, f: F) -> Result<R, PanicInfo>
     where
         F: FnOnce() -> R + std::panic::UnwindSafe,
@@ -53,9 +43,7 @@ impl PanicHandler {
                         eprintln!("VEDA: Task panicked (abort strategy)");
                         std::process::abort();
                     }
-                    PanicStrategy::Isolate => {
-                        // Just return the error
-                    }
+                    PanicStrategy::Isolate => {}
                     PanicStrategy::LogAndContinue => {
                         eprintln!("VEDA: Task panicked: {}", panic_info.message);
                         if let Some(location) = &panic_info.location {
@@ -69,17 +57,14 @@ impl PanicHandler {
         }
     }
     
-    /// Get total number of panics
     pub fn panic_count(&self) -> usize {
         self.panic_count.load(Ordering::Relaxed)
     }
     
-    /// Reset panic counter
     pub fn reset_count(&self) {
         self.panic_count.store(0, Ordering::Relaxed);
     }
     
-    /// Get the strategy
     pub fn strategy(&self) -> PanicStrategy {
         self.strategy
     }
@@ -91,7 +76,6 @@ impl Default for PanicHandler {
     }
 }
 
-/// Information about a panic
 #[derive(Debug, Clone)]
 pub struct PanicInfo {
     pub message: String,
@@ -99,7 +83,6 @@ pub struct PanicInfo {
 }
 
 impl PanicInfo {
-    /// Create panic info from a panic payload
     fn from_payload(payload: Box<dyn std::any::Any + Send>) -> Self {
         let message = if let Some(s) = payload.downcast_ref::<&str>() {
             s.to_string()
@@ -111,7 +94,7 @@ impl PanicInfo {
         
         Self {
             message,
-            location: None, // Could be enhanced with backtrace
+            location: None,
         }
     }
 }
