@@ -1,11 +1,11 @@
-//! Benchmarks comparing VEDA to Rayon
+//! Performance benchmarks comparing VEDA to other parallel libraries
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
 use veda_rs::prelude::*;
-use rayon::prelude::*;
+use rayon::prelude::*; // Used only for benchmark comparison
 
-mod rayon_bench {
-    use rayon::prelude::*;
+mod other_lib_bench {
+    use rayon::prelude::*; // Benchmark comparison library
     
     pub fn par_range(start: i64, end: i64) -> impl ParallelIterator<Item = i64> + 'static {
         (start..end).into_par_iter()
@@ -39,14 +39,14 @@ fn veda_par_iter_sum(c: &mut Criterion) {
     veda_rs::shutdown();
 }
 
-fn rayon_par_iter_sum(c: &mut Criterion) {
+fn other_lib_par_iter_sum(c: &mut Criterion) {
     let mut group = c.benchmark_group("par_iter_sum");
     
     for size in [1_000, 10_000, 100_000, 1_000_000].iter() {
-        group.bench_with_input(BenchmarkId::new("rayon", size), size, |b, &size| {
+        group.bench_with_input(BenchmarkId::new("other_lib", size), size, |b, &size| {
             b.iter(|| {
                 use rayon::iter::ParallelIterator;
-                rayon_bench::par_range(0, size as i64)
+                other_lib_bench::par_range(0, size as i64)
                     .map(|x| black_box(x * 2))
                     .sum::<i64>()
             })
@@ -76,14 +76,14 @@ fn veda_par_iter_collect(c: &mut Criterion) {
     veda_rs::shutdown();
 }
 
-fn rayon_par_iter_collect(c: &mut Criterion) {
+fn other_lib_par_iter_collect(c: &mut Criterion) {
     let mut group = c.benchmark_group("par_iter_collect");
     
     for size in [1_000, 10_000, 100_000].iter() {
-        group.bench_with_input(BenchmarkId::new("rayon", size), size, |b, &size| {
+        group.bench_with_input(BenchmarkId::new("other_lib", size), size, |b, &size| {
             b.iter(|| {
                 use rayon::iter::ParallelIterator;
-                rayon_bench::par_range(0, size as i64)
+                other_lib_bench::par_range(0, size as i64)
                     .map(|x| black_box(x * 2))
                     .collect::<Vec<_>>()
             })
@@ -96,9 +96,9 @@ fn rayon_par_iter_collect(c: &mut Criterion) {
 criterion_group!(
     benches,
     veda_par_iter_sum,
-    rayon_par_iter_sum,
+    other_lib_par_iter_sum,
     veda_par_iter_collect,
-    rayon_par_iter_collect
+    other_lib_par_iter_collect
 );
 
 criterion_main!(benches);

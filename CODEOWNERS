@@ -1,0 +1,62 @@
+# CODEOWNERS file for veda-rs
+# This file defines the individuals or teams responsible for code in this repository.
+# More information: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+# All code must be reviewed by at least one of these maintainers
+* @eshanized @ved0010
+
+# Core Runtime
+/src/runtime.rs @eshanized @ved0010
+/src/runtime_manager.rs @eshanized @ved0010
+/src/executor/ @eshanized @ved0010
+/src/config.rs @eshanized @ved0010
+/src/error.rs @eshanized @ved0010
+
+# Scheduler and Algorithms
+/src/scheduler/ @eshanized @ved0010
+
+# Parallel Iterators
+/src/iter/ @eshanized @ved0010
+
+# Telemetry and Observability
+/src/telemetry/ @eshanized @ved0010
+
+# Async Bridge
+/src/async_bridge/ @eshanized @ved0010
+
+# GPU Support
+/src/gpu/ @eshanized @ved0010
+
+# Memory Management
+/src/memory/ @eshanized @ved0010
+
+# Scoped Parallelism
+/src/scope/ @eshanized @ved0010
+
+# Utilities
+/src/util/ @eshanized @ved0010
+
+# Documentation
+/docs/ @eshanized @ved0010
+/README.md @eshanized @ved0010
+/CONTRIBUTING.md @eshanized @ved0010
+/USAGE.md @eshanized @ved0010
+
+# Examples
+/examples/ @eshanized @ved0010
+
+# Tests
+/tests/ @eshanized @ved0010
+
+# Benchmarks
+/benches/ @eshanized @ved0010
+
+# Build Configuration
+/Cargo.toml @eshanized @ved0010
+/Cargo.lock @eshanized @ved0010
+/.github/ @eshanized @ved0010
+
+# License Files
+/LICENSE-MIT @eshanized @ved0010
+/LICENSE-APACHE @eshanized @ved0010

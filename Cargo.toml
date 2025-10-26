@@ -58,6 +58,7 @@ parking_lot = "0.12"
 # NUMA support (Linux-specific)
 [target.'cfg(target_os = "linux")'.dependencies]
 libnuma = { version = "0.0.4", optional = true }
+libc = "0.2"
 
 [dev-dependencies]
 criterion = "0.5"

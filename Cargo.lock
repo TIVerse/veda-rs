@@ -1703,6 +1703,7 @@ dependencies = [
  "crossbeam-utils",
  "futures",
  "hdrhistogram",
+ "libc",
  "libnuma",
  "num_cpus",
  "parking_lot",

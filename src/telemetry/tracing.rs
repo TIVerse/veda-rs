@@ -3,7 +3,12 @@
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
+use std::sync::Arc;
 use parking_lot::RwLock;
+
+thread_local! {
+    static CURRENT_SPAN: std::cell::RefCell<Option<SpanId>> = std::cell::RefCell::new(None);
+}
 
 /// Unique identifier for a span
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -77,15 +82,24 @@ impl TracingSystem {
         }
         
         let span_id = SpanId::new();
+        
+        // Get parent span from thread-local storage
+        let parent = CURRENT_SPAN.with(|current| *current.borrow());
+        
         let span = Span {
             id: span_id,
-            parent: None, // TODO: track parent spans via thread-local
+            parent,
             name: name.to_string(),
             start: Instant::now(),
             end: None,
             metadata: HashMap::new(),
             events: Vec::new(),
         };
+        
+        // Set this as the current span
+        CURRENT_SPAN.with(|current| {
+            *current.borrow_mut() = Some(span_id);
+        });
         
         self.spans.write().insert(span_id, span);
         
@@ -130,6 +144,13 @@ impl TracingSystem {
     pub fn clear(&self) {
         self.spans.write().clear();
     }
+    
+    /// Close a span (mark its end time)
+    fn close_span(&self, span_id: SpanId) {
+        if let Some(span) = self.spans.write().get_mut(&span_id) {
+            span.end = Some(Instant::now());
+        }
+    }
 }
 
 impl Default for TracingSystem {
@@ -168,9 +189,18 @@ impl<'a> SpanGuard<'a> {
 impl<'a> Drop for SpanGuard<'a> {
     fn drop(&mut self) {
         if let Some(span_id) = self.span_id {
-            if let Some(span) = self.system.spans.write().get_mut(&span_id) {
-                span.end = Some(Instant::now());
-            }
+            // Get parent before closing
+            let parent = self.system.spans.read()
+                .get(&span_id)
+                .and_then(|span| span.parent);
+            
+            // Close the span
+            self.system.close_span(span_id);
+            
+            // Restore parent as current span
+            CURRENT_SPAN.with(|current| {
+                *current.borrow_mut() = parent;
+            });
         }
     }
 }

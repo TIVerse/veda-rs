@@ -89,8 +89,8 @@ impl GpuRuntime {
         // Execute kernel
         compiled.execute(&self.queue, &input_buffer, &output_buffer).await?;
         
-        // Read back results
-        let result = output_buffer.read_data().await?;
+        // Read back results with proper queue reference
+        let result = output_buffer.read_data(&self.queue).await?;
         
         Ok(result)
     }

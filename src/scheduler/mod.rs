@@ -1,6 +1,7 @@
 pub mod adaptive;
 pub mod work_stealing;
 pub mod priority;
+pub mod coordinator;
 
 #[cfg(feature = "energy-aware")]
 pub mod energy;
@@ -11,6 +12,7 @@ pub mod deterministic;
 pub use adaptive::{AdaptiveScheduler, LoadEstimator};
 pub use work_stealing::WorkStealingQueue;
 pub use priority::{Priority, PriorityQueue};
+pub use coordinator::SchedulerCoordinator;
 
 #[cfg(feature = "energy-aware")]
 pub use energy::{EnergyAwareScheduler, PowerMonitor};

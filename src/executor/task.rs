@@ -1,28 +1,15 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
-static TASK_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
+pub use crate::scheduler::priority::Priority;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TaskId(u64);
 
 impl TaskId {
-    fn next() -> Self {
+    pub fn new() -> Self {
+        static TASK_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
         TaskId(TASK_ID_COUNTER.fetch_add(1, Ordering::Relaxed))
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Priority {
-    Realtime = 0,
-    High = 1,
-    Normal = 2,
-    Low = 3,
-    Background = 4,
-}
-
-impl Default for Priority {
-    fn default() -> Self {
-        Priority::Normal
     }
 }
 
@@ -31,6 +18,7 @@ pub(crate) struct Task {
     pub(crate) func: Box<dyn FnOnce() + Send + 'static>,
     pub(crate) priority: Priority,
     pub(crate) spawn_time: Instant,
+    pub(crate) deadline: Option<Instant>,
 }
 
 impl Task {
@@ -39,10 +27,11 @@ impl Task {
         F: FnOnce() + Send + 'static,
     {
         Task {
-            id: TaskId::next(),
+            id: TaskId::new(),
             func: Box::new(f),
             priority: Priority::Normal,
             spawn_time: Instant::now(),
+            deadline: None,
         }
     }
     
@@ -51,11 +40,17 @@ impl Task {
         F: FnOnce() + Send + 'static,
     {
         Task {
-            id: TaskId::next(),
+            id: TaskId::new(),
             func: Box::new(f),
             priority,
             spawn_time: Instant::now(),
+            deadline: None,
         }
+    }
+    
+    pub fn with_deadline(mut self, deadline: Instant) -> Self {
+        self.deadline = Some(deadline);
+        self
     }
     
     pub fn execute(self) {
@@ -69,6 +64,7 @@ impl std::fmt::Debug for Task {
             .field("id", &self.id)
             .field("priority", &self.priority)
             .field("spawn_time", &self.spawn_time)
+            .field("deadline", &self.deadline)
             .finish()
     }
 }

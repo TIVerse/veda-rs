@@ -1,5 +1,5 @@
 // VEDA - parallel runtime for Rust
-// work-stealing task scheduler with rayon-like API
+// High-performance work-stealing task scheduler with intuitive parallel iterator API
 #![allow(dead_code)]
 pub mod config;
 pub mod error;
@@ -7,6 +7,7 @@ pub mod executor;
 pub mod iter;
 pub mod prelude;
 pub mod runtime;
+pub mod runtime_manager;
 pub mod scheduler;
 pub mod scope;
 pub mod telemetry;
@@ -23,8 +24,17 @@ pub mod memory;
 
 pub use config::{Config, ConfigBuilder, SchedulingPolicy};
 pub use error::{Error, Result};
-pub use iter::{IntoParallelIterator, ParallelIterator};
-pub use runtime::{init, init_with_config, init_thread_local, init_thread_local_with_config, shutdown};
+pub use iter::{IntoParallelIterator, ParallelIterator, ParallelSlice};
+pub use runtime::{init, init_with_config, init_thread_local, init_thread_local_with_config, shutdown, set_lazy_init};
+pub use runtime_manager::RuntimeManager;
+pub use executor::task::Priority;
+pub use util::{BackpressureController, BackpressureConfig};
+
+#[cfg(feature = "telemetry")]
+pub use telemetry::{Metrics, MetricsSnapshot, MetricsExporter, JsonExporter};
+
+#[cfg(feature = "async")]
+pub use async_bridge::{spawn_async, block_on, ParStreamExt};
 
 #[cfg(test)]
 mod tests {

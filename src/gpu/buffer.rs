@@ -42,7 +42,7 @@ impl GpuBuffer {
     }
     
     /// Read data from the buffer
-    pub async fn read_data(&self) -> Result<Vec<u8>> {
+    pub async fn read_data(&self, queue: &wgpu::Queue) -> Result<Vec<u8>> {
         let staging_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("veda-staging-buffer"),
             size: self.size as u64,
@@ -55,11 +55,31 @@ impl GpuBuffer {
         });
         
         encoder.copy_buffer_to_buffer(&self.buffer, 0, &staging_buffer, 0, self.size as u64);
+        queue.submit(Some(encoder.finish()));
         
-        // Note: In a real implementation, we'd need to submit and wait
-        // This is a simplified version
+        // Map the staging buffer for reading
+        let buffer_slice = staging_buffer.slice(..);
+        let (sender, receiver) = futures::channel::oneshot::channel();
         
-        Ok(vec![0u8; self.size])
+        buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
+            sender.send(result).unwrap();
+        });
+        
+        // Poll the device until mapping is complete
+        self.device.poll(wgpu::Maintain::Wait);
+        
+        receiver.await
+            .map_err(|e| Error::gpu(format!("Failed to receive map result: {}", e)))?
+            .map_err(|e| Error::gpu(format!("Failed to map buffer: {:?}", e)))?;
+        
+        // Read the data
+        let data = buffer_slice.get_mapped_range();
+        let result = data.to_vec();
+        
+        drop(data);
+        staging_buffer.unmap();
+        
+        Ok(result)
     }
     
     /// Get the underlying wgpu buffer

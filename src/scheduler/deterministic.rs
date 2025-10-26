@@ -90,6 +90,25 @@ impl DeterministicScheduler {
     pub fn seed(&self) -> u64 {
         self.seed
     }
+    
+    /// Get the next worker in a deterministic manner
+    pub fn next_worker(&self) -> WorkerId {
+        let worker_id = {
+            let mut rng = self.rng.lock();
+            rng.gen_range(0..self.num_workers)
+        };
+        WorkerId(worker_id)
+    }
+    
+    /// Record task execution
+    pub fn record_execution(&self, worker_id: WorkerId, task_id: usize) {
+        self.record_task_start(task_id, worker_id);
+    }
+    
+    /// Collect statistics (returns None for deterministic mode)
+    pub fn collect_statistics(&self) -> Option<super::LoadStatistics> {
+        None // Deterministic mode doesn't collect load statistics
+    }
 }
 
 /// Execution trace for deterministic replay

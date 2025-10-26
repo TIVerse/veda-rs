@@ -2304,7 +2304,7 @@ pub fn sched(&mut self, t: Task) -> Result<usize> { /* ... */ }
 - **Idle Worker Latency**: < 1μs to wake and execute
 - **Work Stealing Latency**: < 500ns per steal attempt
 - **Memory Overhead**: < 1MB per worker thread
-- **Telemetry Overhead**: < 5% in production mode
+- **Telemetry Overhead**: < 5% overhead
 
 ### 18.3 Safety Requirements
 
@@ -2532,13 +2532,13 @@ Special thanks to the Rust community for feedback and contributions.
 
 ## 25. Conclusion
 
-VEDA represents the next evolution of parallel computing in Rust. By combining adaptive scheduling, heterogeneous compute support, deterministic execution, and comprehensive observability, VEDA provides a production-ready runtime for modern parallel applications.
+VEDA represents the next evolution of parallel computing in Rust. By combining adaptive scheduling, heterogeneous compute support, deterministic execution, and comprehensive observability, VEDA provides a complete runtime for modern parallel applications.
 
 The architecture is designed for:
 - **Simplicity**: Drop-in replacement for Rayon with minimal changes
 - **Performance**: Zero-cost abstractions with adaptive optimization
 - **Reliability**: Memory safety, panic isolation, deterministic testing
-- **Observability**: Rich telemetry for production debugging
+- **Observability**: Rich telemetry for debugging
 - **Flexibility**: Pluggable schedulers, custom allocators, energy awareness
 
 VEDA is ready for implementation and designed to serve as the foundation for parallel computing in Rust for the next decade.
