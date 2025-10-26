@@ -1,4 +1,4 @@
-use crossbeam_channel::{bounded, Sender, Receiver};
+use crossbeam_channel::{bounded, Receiver, Sender};
 use std::marker::PhantomData;
 
 pub struct Scope<'scope> {
@@ -18,18 +18,17 @@ impl<'scope> Scope<'scope> {
             _marker: PhantomData,
         }
     }
-    
+
     pub fn spawn<F>(&mut self, f: F)
     where
         F: FnOnce() + Send + 'scope,
     {
         let tx = self.tx.clone();
         self.pending += 1;
-        
-        let f: Box<dyn FnOnce() + Send + 'static> = unsafe {
-            std::mem::transmute(Box::new(f) as Box<dyn FnOnce() + Send + 'scope>)
-        };
-        
+
+        let f: Box<dyn FnOnce() + Send + 'static> =
+            unsafe { std::mem::transmute(Box::new(f) as Box<dyn FnOnce() + Send + 'scope>) };
+
         crate::runtime::with_current_runtime(|rt| {
             rt.pool.execute(move || {
                 f();

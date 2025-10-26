@@ -11,15 +11,15 @@ impl<T> CachePadded<T> {
     pub const fn new(value: T) -> Self {
         Self { value }
     }
-    
+
     pub fn get(&self) -> &T {
         &self.value
     }
-    
+
     pub fn get_mut(&mut self) -> &mut T {
         &mut self.value
     }
-    
+
     pub fn into_inner(self) -> T {
         self.value
     }
@@ -27,7 +27,7 @@ impl<T> CachePadded<T> {
 
 impl<T> Deref for CachePadded<T> {
     type Target = T;
-    
+
     fn deref(&self) -> &T {
         &self.value
     }
@@ -41,9 +41,7 @@ impl<T> DerefMut for CachePadded<T> {
 
 impl<T: fmt::Debug> fmt::Debug for CachePadded<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("CachePadded")
-            .field(&self.value)
-            .finish()
+        f.debug_tuple("CachePadded").field(&self.value).finish()
     }
 }
 
@@ -75,20 +73,20 @@ impl<T: Eq> Eq for CachePadded<T> {}
 mod tests {
     use super::*;
     use std::mem::{align_of, size_of};
-    
+
     #[test]
     fn test_cache_padded_alignment() {
         assert_eq!(align_of::<CachePadded<u64>>(), 64);
         assert!(size_of::<CachePadded<u64>>() >= 64);
     }
-    
+
     #[test]
     fn test_cache_padded_value() {
         let padded = CachePadded::new(42);
         assert_eq!(*padded, 42);
         assert_eq!(*padded.get(), 42);
     }
-    
+
     #[test]
     fn test_cache_padded_mut() {
         let mut padded = CachePadded::new(10);

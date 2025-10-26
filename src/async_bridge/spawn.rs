@@ -1,11 +1,11 @@
 //! Async task spawning within VEDA runtime.
 
-use crate::runtime;
 use crate::error::Result;
+use crate::runtime;
+use async_channel::{bounded, Receiver, Sender};
 use futures::Future;
-use std::sync::Arc;
 use parking_lot::Mutex;
-use async_channel::{Sender, Receiver, bounded};
+use std::sync::Arc;
 
 /// Spawn an async task in the VEDA runtime
 ///
@@ -16,19 +16,19 @@ where
     T: Send + 'static,
 {
     let (sender, receiver) = bounded(1);
-    
+
     runtime::with_current_runtime(|rt| {
         let task_future = async move {
             let result = future.await;
             let _ = sender.send(result).await;
         };
-        
+
         // Execute the future on a worker thread
         rt.pool.execute(move || {
             futures::executor::block_on(task_future);
         });
     });
-    
+
     JoinHandle { receiver }
 }
 
@@ -50,10 +50,12 @@ pub struct JoinHandle<T> {
 impl<T> JoinHandle<T> {
     /// Wait for the task to complete and get the result
     pub async fn join(self) -> Result<T> {
-        self.receiver.recv().await
+        self.receiver
+            .recv()
+            .await
             .map_err(|_| crate::error::Error::async_error("Task was cancelled"))
     }
-    
+
     /// Try to get the result without blocking
     pub fn try_join(&self) -> Option<T> {
         self.receiver.try_recv().ok()
@@ -63,19 +65,19 @@ impl<T> JoinHandle<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_spawn_async() {
         crate::runtime::shutdown();
         crate::runtime::init().unwrap();
-        
+
         let handle = spawn_async(async { 42 });
         let result = block_on(handle.join()).unwrap();
         assert_eq!(result, 42);
-        
+
         crate::runtime::shutdown();
     }
-    
+
     #[test]
     fn test_block_on() {
         let result = block_on(async {
@@ -83,7 +85,7 @@ mod tests {
             let y = 32;
             x + y
         });
-        
+
         assert_eq!(result, 42);
     }
 }

@@ -1,7 +1,7 @@
 pub mod adaptive;
-pub mod work_stealing;
-pub mod priority;
 pub mod coordinator;
+pub mod priority;
+pub mod work_stealing;
 
 #[cfg(feature = "energy-aware")]
 pub mod energy;
@@ -10,9 +10,9 @@ pub mod energy;
 pub mod deterministic;
 
 pub use adaptive::{AdaptiveScheduler, LoadEstimator};
-pub use work_stealing::WorkStealingQueue;
-pub use priority::{Priority, PriorityQueue};
 pub use coordinator::SchedulerCoordinator;
+pub use priority::{Priority, PriorityQueue};
+pub use work_stealing::WorkStealingQueue;
 
 #[cfg(feature = "energy-aware")]
 pub use energy::{EnergyAwareScheduler, PowerMonitor};
@@ -20,12 +20,15 @@ pub use energy::{EnergyAwareScheduler, PowerMonitor};
 #[cfg(feature = "deterministic")]
 pub use deterministic::DeterministicScheduler;
 
-use crate::executor::Task;
 use crate::error::Result;
+use crate::executor::Task;
 use std::time::Instant;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "deterministic", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(
+    feature = "deterministic",
+    derive(serde::Serialize, serde::Deserialize)
+)]
 pub struct WorkerId(pub usize);
 #[derive(Debug, Clone)]
 pub struct WorkerState {
@@ -48,7 +51,7 @@ impl WorkerState {
             current_task: None,
         }
     }
-    
+
     pub fn utilization(&self) -> f64 {
         let total = self.idle_time_ns + self.busy_time_ns;
         if total == 0 {

@@ -2,26 +2,26 @@
 
 use super::metrics::{Metrics, MetricsSnapshot};
 use crate::scheduler::adaptive::AdaptiveScheduler;
+use parking_lot::RwLock;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use parking_lot::RwLock;
 
 /// Configuration for feedback controller
 #[derive(Debug, Clone)]
 pub struct FeedbackConfig {
     /// Minimum task rate (tasks/sec) to maintain
     pub min_task_rate: f64,
-    
+
     /// Maximum acceptable P99 latency in nanoseconds
     pub max_latency_ns: u64,
-    
+
     /// Maximum power consumption in watts (if energy-aware)
     pub max_power_watts: Option<f64>,
-    
+
     /// Update interval for feedback loop
     pub update_interval: Duration,
-    
+
     /// Size of history buffer for trend analysis
     pub history_size: usize,
 }
@@ -57,7 +57,7 @@ impl FeedbackController {
             last_update: RwLock::new(Instant::now()),
         }
     }
-    
+
     /// Update the feedback loop and make adjustments
     pub fn update(&self) -> FeedbackAction {
         let now = Instant::now();
@@ -65,15 +65,15 @@ impl FeedbackController {
             let last = *self.last_update.read();
             now.duration_since(last)
         };
-        
+
         // Only update at specified interval
         if elapsed < self.config.update_interval {
             return FeedbackAction::None;
         }
-        
+
         // Get current metrics
         let snapshot = self.metrics.snapshot();
-        
+
         // Add to history
         {
             let mut history = self.history.write();
@@ -82,14 +82,14 @@ impl FeedbackController {
                 history.pop_front();
             }
         }
-        
+
         // Update timestamp
         *self.last_update.write() = now;
-        
+
         // Analyze and determine action
         self.analyze(&snapshot)
     }
-    
+
     /// Analyze metrics and determine necessary action
     fn analyze(&self, current: &MetricsSnapshot) -> FeedbackAction {
         // Check latency
@@ -98,7 +98,7 @@ impl FeedbackController {
                 reason: "High latency detected".to_string(),
             };
         }
-        
+
         // Check task rate
         let task_rate = current.tasks_per_second();
         if task_rate < self.config.min_task_rate && current.tasks_executed > 100 {
@@ -106,7 +106,7 @@ impl FeedbackController {
                 reason: "Low throughput detected".to_string(),
             };
         }
-        
+
         // Check utilization
         let utilization = current.utilization();
         if utilization < 0.3 && current.tasks_executed > 100 {
@@ -114,41 +114,47 @@ impl FeedbackController {
                 reason: "Low utilization detected".to_string(),
             };
         }
-        
+
         FeedbackAction::None
     }
-    
+
     /// Compute rate of change for a metric
     pub fn compute_delta(&self) -> Option<MetricsDelta> {
         let history = self.history.read();
-        
+
         if history.len() < 2 {
             return None;
         }
-        
+
         let current = history.back()?;
         let previous = history.get(history.len().saturating_sub(10))?;
-        
-        let time_delta = current.timestamp.duration_since(previous.timestamp).as_secs_f64();
+
+        let time_delta = current
+            .timestamp
+            .duration_since(previous.timestamp)
+            .as_secs_f64();
         if time_delta == 0.0 {
             return None;
         }
-        
+
         Some(MetricsDelta {
-            task_rate_change: ((current.tasks_executed - previous.tasks_executed) as f64 / time_delta)
+            task_rate_change: ((current.tasks_executed - previous.tasks_executed) as f64
+                / time_delta)
                 - previous.tasks_per_second(),
             latency_p99_change: current.p99_latency_ns as i64 - previous.p99_latency_ns as i64,
             utilization_change: current.utilization() - previous.utilization(),
         })
     }
-    
+
     /// Get recent trends
     pub fn trends(&self) -> Trends {
         let delta = self.compute_delta();
-        
+
         Trends {
             task_rate_trend: delta.as_ref().map(|d| classify_trend(d.task_rate_change)),
-            latency_trend: delta.as_ref().map(|d| classify_trend(d.latency_p99_change as f64)),
+            latency_trend: delta
+                .as_ref()
+                .map(|d| classify_trend(d.latency_p99_change as f64)),
             utilization_trend: delta.as_ref().map(|d| classify_trend(d.utilization_change)),
         }
     }
@@ -159,13 +165,13 @@ impl FeedbackController {
 pub enum FeedbackAction {
     /// No action needed
     None,
-    
+
     /// Increase parallelism to improve throughput
     IncreaseParallelism { reason: String },
-    
+
     /// Reduce load to improve latency
     ReduceLoad { reason: String },
-    
+
     /// Optimize resource usage
     OptimizeResources { reason: String },
 }
@@ -196,7 +202,7 @@ pub struct Trends {
 
 fn classify_trend(value: f64) -> Trend {
     const THRESHOLD: f64 = 0.05; // 5% change threshold
-    
+
     if value > THRESHOLD {
         Trend::Increasing
     } else if value < -THRESHOLD {
@@ -209,17 +215,17 @@ fn classify_trend(value: f64) -> Trend {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_feedback_controller() {
         let metrics = Arc::new(Metrics::new());
         let config = FeedbackConfig::default();
         let controller = FeedbackController::new(metrics, config);
-        
+
         let action = controller.update();
         assert_eq!(action, FeedbackAction::None);
     }
-    
+
     #[test]
     fn test_trend_classification() {
         assert_eq!(classify_trend(0.1), Trend::Increasing);

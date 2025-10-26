@@ -1,11 +1,11 @@
 //! Parallel async stream processing.
 
 use crate::runtime;
-use futures::{Stream, Future};
+use async_channel::{bounded, Receiver, Sender};
+use futures::{Future, Stream};
+use parking_lot::Mutex;
 use std::pin::Pin;
 use std::sync::Arc;
-use async_channel::{bounded, Sender, Receiver};
-use parking_lot::Mutex;
 
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
@@ -17,7 +17,7 @@ pub trait ParStreamExt: Stream + Sized {
         F: Fn(Self::Item) -> Fut + Send + Sync + 'static,
         Fut: Future<Output = ()> + Send + 'static,
         Self::Item: Send + 'static;
-    
+
     /// Map stream items in parallel
     fn par_map<F, Fut, R>(self, f: F) -> ParMap<Self, F>
     where
@@ -25,7 +25,7 @@ pub trait ParStreamExt: Stream + Sized {
         Fut: Future<Output = R> + Send + 'static,
         R: Send + 'static,
         Self::Item: Send + 'static;
-    
+
     /// Filter stream items in parallel
     fn par_filter<F, Fut>(self, f: F) -> ParFilter<Self, F>
     where
@@ -51,7 +51,7 @@ where
             max_concurrency: num_cpus::get(),
         }
     }
-    
+
     fn par_map<F, Fut, R>(self, f: F) -> ParMap<Self, F>
     where
         F: Fn(Self::Item) -> Fut + Send + Sync + 'static,
@@ -65,7 +65,7 @@ where
             max_concurrency: num_cpus::get(),
         }
     }
-    
+
     fn par_filter<F, Fut>(self, f: F) -> ParFilter<Self, F>
     where
         F: Fn(&Self::Item) -> Fut + Send + Sync + 'static,
@@ -95,19 +95,19 @@ where
     Fut: Future<Output = ()> + Send + 'static,
 {
     pub async fn execute(self) {
-        use futures::StreamExt;
         use crate::runtime;
-        
+        use futures::StreamExt;
+
         let (tx, rx): (Sender<S::Item>, Receiver<S::Item>) = bounded(self.buffer_size);
         let func = self.func.clone();
-        
+
         // Spawn consumer tasks on VEDA runtime
         let completion_signals: Vec<_> = (0..self.max_concurrency)
             .map(|_| {
                 let rx = rx.clone();
                 let func = func.clone();
                 let (done_tx, done_rx) = bounded(1);
-                
+
                 runtime::with_current_runtime(|rt| {
                     rt.pool.execute(move || {
                         futures::executor::block_on(async {
@@ -118,11 +118,11 @@ where
                         });
                     });
                 });
-                
+
                 done_rx
             })
             .collect();
-        
+
         // Producer: feed stream items
         let mut stream = Box::pin(self.stream);
         while let Some(item) = stream.next().await {
@@ -130,9 +130,9 @@ where
                 break;
             }
         }
-        
+
         drop(tx); // Signal completion
-        
+
         // Wait for all consumers
         for done_rx in completion_signals {
             let _ = done_rx.recv().await;
@@ -156,13 +156,14 @@ where
     R: Send + 'static,
 {
     pub async fn collect(self) -> Vec<R> {
-        use futures::StreamExt;
         use crate::runtime;
-        
+        use futures::StreamExt;
+
         let results = Arc::new(Mutex::new(Vec::new()));
-        let (tx, rx): (Sender<(usize, S::Item)>, Receiver<(usize, S::Item)>) = bounded(self.buffer_size);
+        let (tx, rx): (Sender<(usize, S::Item)>, Receiver<(usize, S::Item)>) =
+            bounded(self.buffer_size);
         let func = self.func.clone();
-        
+
         // Spawn consumer tasks on VEDA runtime
         let completion_signals: Vec<_> = (0..self.max_concurrency)
             .map(|_| {
@@ -170,7 +171,7 @@ where
                 let func = func.clone();
                 let results = results.clone();
                 let (done_tx, done_rx) = bounded(1);
-                
+
                 runtime::with_current_runtime(|rt| {
                     rt.pool.execute(move || {
                         futures::executor::block_on(async {
@@ -182,11 +183,11 @@ where
                         });
                     });
                 });
-                
+
                 done_rx
             })
             .collect();
-        
+
         // Producer: feed stream items with index
         let mut stream = Box::pin(self.stream);
         let mut idx = 0;
@@ -196,14 +197,14 @@ where
             }
             idx += 1;
         }
-        
+
         drop(tx);
-        
+
         // Wait for all consumers
         for done_rx in completion_signals {
             let _ = done_rx.recv().await;
         }
-        
+
         // Sort by index and extract values
         let mut result_vec = match Arc::try_unwrap(results) {
             Ok(mutex) => mutex.into_inner(),
@@ -233,13 +234,13 @@ where
     Fut: Future<Output = bool> + Send + 'static,
 {
     pub async fn collect(self) -> Vec<S::Item> {
-        use futures::StreamExt;
         use crate::runtime;
-        
+        use futures::StreamExt;
+
         let results = Arc::new(Mutex::new(Vec::new()));
         let (tx, rx): (Sender<S::Item>, Receiver<S::Item>) = bounded(self.buffer_size);
         let func = self.func.clone();
-        
+
         // Spawn consumer tasks on VEDA runtime
         let completion_signals: Vec<_> = (0..self.max_concurrency)
             .map(|_| {
@@ -247,7 +248,7 @@ where
                 let func = func.clone();
                 let results = results.clone();
                 let (done_tx, done_rx) = bounded(1);
-                
+
                 runtime::with_current_runtime(|rt| {
                     rt.pool.execute(move || {
                         futures::executor::block_on(async {
@@ -260,11 +261,11 @@ where
                         });
                     });
                 });
-                
+
                 done_rx
             })
             .collect();
-        
+
         // Producer: feed stream items
         let mut stream = Box::pin(self.stream);
         while let Some(item) = stream.next().await {
@@ -272,14 +273,14 @@ where
                 break;
             }
         }
-        
+
         drop(tx);
-        
+
         // Wait for all consumers
         for done_rx in completion_signals {
             let _ = done_rx.recv().await;
         }
-        
+
         // Extract results
         match Arc::try_unwrap(results) {
             Ok(mutex) => mutex.into_inner(),
@@ -295,60 +296,62 @@ where
 mod tests {
     use super::*;
     use futures::stream;
-    
+
     #[test]
     fn test_par_for_each() {
         use std::sync::atomic::{AtomicUsize, Ordering};
-        
+
         crate::runtime::shutdown();
         crate::runtime::init().unwrap();
-        
+
         let counter = Arc::new(AtomicUsize::new(0));
         let items = stream::iter(0..10);
-        
+
         let counter_clone = counter.clone();
-        let fut = items.par_for_each(move |_| {
-            let c = counter_clone.clone();
-            async move {
-                c.fetch_add(1, Ordering::Relaxed);
-            }
-        }).execute();
-        
+        let fut = items
+            .par_for_each(move |_| {
+                let c = counter_clone.clone();
+                async move {
+                    c.fetch_add(1, Ordering::Relaxed);
+                }
+            })
+            .execute();
+
         futures::executor::block_on(fut);
         assert_eq!(counter.load(Ordering::Relaxed), 10);
-        
+
         crate::runtime::shutdown();
     }
-    
+
     #[test]
     fn test_par_map() {
         crate::runtime::shutdown();
         crate::runtime::init().unwrap();
-        
+
         let items = stream::iter(0..10);
         let fut = items.par_map(|x| async move { x * 2 }).collect();
-        
+
         let results = futures::executor::block_on(fut);
         assert_eq!(results.len(), 10);
         assert!(results.contains(&0));
         assert!(results.contains(&18));
-        
+
         crate::runtime::shutdown();
     }
-    
+
     #[test]
     fn test_par_filter() {
         crate::runtime::shutdown();
         crate::runtime::init().unwrap();
-        
+
         let items = stream::iter(0..10);
         let fut = items.par_filter(|x| async move { *x % 2 == 0 }).collect();
-        
+
         let results = futures::executor::block_on(fut);
         assert_eq!(results.len(), 5);
         assert!(results.contains(&0));
         assert!(results.contains(&8));
-        
+
         crate::runtime::shutdown();
     }
 }

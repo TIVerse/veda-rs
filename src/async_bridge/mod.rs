@@ -1,15 +1,15 @@
-pub mod spawn;
 pub mod executor_bridge;
+pub mod spawn;
 pub mod waker;
 
 #[cfg(feature = "async")]
 pub mod par_stream;
 
 #[cfg(feature = "async")]
-pub use par_stream::{ParStreamExt, ParForEach, ParMap, ParFilter};
+pub use par_stream::{ParFilter, ParForEach, ParMap, ParStreamExt};
 
-pub use spawn::{spawn_async, block_on};
 pub use executor_bridge::AsyncBridge;
+pub use spawn::{block_on, spawn_async};
 pub use waker::VedaWaker;
 
 use futures::Future;

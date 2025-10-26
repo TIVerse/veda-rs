@@ -1,12 +1,12 @@
 //! Performance benchmarks comparing VEDA to other parallel libraries
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use veda_rs::prelude::*;
-use rayon::prelude::*; // Used only for benchmark comparison
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use rayon::prelude::*;
+use veda_rs::prelude::*; // Used only for benchmark comparison
 
 mod other_lib_bench {
     use rayon::prelude::*; // Benchmark comparison library
-    
+
     pub fn par_range(start: i64, end: i64) -> impl ParallelIterator<Item = i64> + 'static {
         (start..end).into_par_iter()
     }
@@ -14,7 +14,7 @@ mod other_lib_bench {
 
 mod veda_bench {
     use veda_rs::prelude::*;
-    
+
     pub fn par_range(start: i64, end: i64) -> impl ParallelIterator<Item = i64> + 'static {
         (start..end).into_par_iter()
     }
@@ -22,9 +22,9 @@ mod veda_bench {
 
 fn veda_par_iter_sum(c: &mut Criterion) {
     veda_rs::init().unwrap();
-    
+
     let mut group = c.benchmark_group("par_iter_sum");
-    
+
     for size in [1_000, 10_000, 100_000, 1_000_000].iter() {
         group.bench_with_input(BenchmarkId::new("veda", size), size, |b, &size| {
             b.iter(|| {
@@ -34,14 +34,14 @@ fn veda_par_iter_sum(c: &mut Criterion) {
             })
         });
     }
-    
+
     group.finish();
     veda_rs::shutdown();
 }
 
 fn other_lib_par_iter_sum(c: &mut Criterion) {
     let mut group = c.benchmark_group("par_iter_sum");
-    
+
     for size in [1_000, 10_000, 100_000, 1_000_000].iter() {
         group.bench_with_input(BenchmarkId::new("other_lib", size), size, |b, &size| {
             b.iter(|| {
@@ -52,15 +52,15 @@ fn other_lib_par_iter_sum(c: &mut Criterion) {
             })
         });
     }
-    
+
     group.finish();
 }
 
 fn veda_par_iter_collect(c: &mut Criterion) {
     veda_rs::init().unwrap();
-    
+
     let mut group = c.benchmark_group("par_iter_collect");
-    
+
     for size in [1_000, 10_000, 100_000].iter() {
         group.bench_with_input(BenchmarkId::new("veda", size), size, |b, &size| {
             b.iter(|| {
@@ -71,14 +71,14 @@ fn veda_par_iter_collect(c: &mut Criterion) {
             })
         });
     }
-    
+
     group.finish();
     veda_rs::shutdown();
 }
 
 fn other_lib_par_iter_collect(c: &mut Criterion) {
     let mut group = c.benchmark_group("par_iter_collect");
-    
+
     for size in [1_000, 10_000, 100_000].iter() {
         group.bench_with_input(BenchmarkId::new("other_lib", size), size, |b, &size| {
             b.iter(|| {
@@ -89,7 +89,7 @@ fn other_lib_par_iter_collect(c: &mut Criterion) {
             })
         });
     }
-    
+
     group.finish();
 }
 

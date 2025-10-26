@@ -2,29 +2,29 @@
 
 use super::buffer::GpuBuffer;
 use crate::error::Result;
-use wgpu;
 use std::time::Duration;
+use wgpu;
 
 /// Trait for GPU kernels
 pub trait GpuKernel: Send + Sync {
     /// Compile the kernel to a compute pipeline
     fn compile(&self, device: &wgpu::Device) -> Result<CompiledKernel>;
-    
+
     /// Estimate execution duration for scheduling
     fn estimate_duration(&self, input_size: usize) -> Duration {
         // Default heuristic: 1 nanosecond per element
         Duration::from_nanos(input_size as u64)
     }
-    
+
     /// Check if GPU execution is worthwhile
     fn gpu_worthwhile(&self, input_size: usize) -> bool {
         // Default threshold: 10,000 elements
         input_size > 10_000
     }
-    
+
     /// Get input data size in bytes
     fn input_size(&self) -> usize;
-    
+
     /// Get output data size in bytes
     fn output_size(&self) -> usize;
 }
@@ -49,7 +49,7 @@ impl CompiledKernel {
             workgroup_size,
         }
     }
-    
+
     /// Execute the kernel
     pub async fn execute(
         &self,
@@ -58,44 +58,48 @@ impl CompiledKernel {
         output: &GpuBuffer,
     ) -> Result<()> {
         // Create bind group
-        let bind_group = input.device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("veda-kernel-bind-group"),
-            layout: &self.bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: input.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: output.buffer().as_entire_binding(),
-                },
-            ],
-        });
-        
+        let bind_group = input
+            .device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("veda-kernel-bind-group"),
+                layout: &self.bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: input.buffer().as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: output.buffer().as_entire_binding(),
+                    },
+                ],
+            });
+
         // Create command encoder
-        let mut encoder = input.device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("veda-kernel-encoder"),
-        });
-        
+        let mut encoder = input
+            .device()
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("veda-kernel-encoder"),
+            });
+
         {
             let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("veda-compute-pass"),
                 timestamp_writes: None,
             });
-            
+
             compute_pass.set_pipeline(&self.pipeline);
             compute_pass.set_bind_group(0, &bind_group, &[]);
-            
+
             let (x, y, z) = self.workgroup_size;
             compute_pass.dispatch_workgroups(x, y, z);
         }
-        
+
         queue.submit(Some(encoder.finish()));
-        
+
         Ok(())
     }
-    
+
     /// Get workgroup size
     pub fn workgroup_size(&self) -> (u32, u32, u32) {
         self.workgroup_size
@@ -125,12 +129,12 @@ impl GpuKernel for VectorAddKernel {
                 output[idx] = input[idx] * 2.0;
             }
         "#;
-        
+
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("veda-vector-add-shader"),
             source: wgpu::ShaderSource::Wgsl(shader_source.into()),
         });
-        
+
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("veda-vector-add-layout"),
             entries: &[
@@ -156,33 +160,33 @@ impl GpuKernel for VectorAddKernel {
                 },
             ],
         });
-        
+
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("veda-vector-add-pipeline-layout"),
             bind_group_layouts: &[&bind_group_layout],
             push_constant_ranges: &[],
         });
-        
+
         let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("veda-vector-add-pipeline"),
             layout: Some(&pipeline_layout),
             module: &shader,
             entry_point: "main",
         });
-        
+
         let workgroup_count = ((self.size as u32 + 255) / 256).max(1);
-        
+
         Ok(CompiledKernel::new(
             pipeline,
             bind_group_layout,
             (workgroup_count, 1, 1),
         ))
     }
-    
+
     fn input_size(&self) -> usize {
         self.size * std::mem::size_of::<f32>()
     }
-    
+
     fn output_size(&self) -> usize {
         self.size * std::mem::size_of::<f32>()
     }

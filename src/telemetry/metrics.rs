@@ -1,17 +1,17 @@
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::Instant;
 use hdrhistogram::Histogram;
 use parking_lot::RwLock;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Instant;
 
 #[derive(Debug)]
 pub struct Metrics {
     tasks_executed: AtomicU64,
     tasks_stolen: AtomicU64,
     tasks_panicked: AtomicU64,
-    
+
     idle_time_ns: AtomicU64,
     busy_time_ns: AtomicU64,
-    
+
     latency_histogram: RwLock<Histogram<u64>>,
     memory_allocated: AtomicU64,
     start_time: Instant,
@@ -19,9 +19,9 @@ pub struct Metrics {
 
 impl Metrics {
     pub fn new() -> Self {
-        let histogram = Histogram::new_with_max(3_600_000_000_000, 3)
-            .expect("Failed to create histogram");
-        
+        let histogram =
+            Histogram::new_with_max(3_600_000_000_000, 3).expect("Failed to create histogram");
+
         Self {
             tasks_executed: AtomicU64::new(0),
             tasks_stolen: AtomicU64::new(0),
@@ -33,37 +33,38 @@ impl Metrics {
             start_time: Instant::now(),
         }
     }
-    
+
     pub fn record_task_execution(&self, duration_ns: u64) {
         self.tasks_executed.fetch_add(1, Ordering::Relaxed);
         if let Some(mut hist) = self.latency_histogram.try_write() {
             let _ = hist.record(duration_ns);
         }
     }
-    
+
     pub fn record_task_stolen(&self) {
         self.tasks_stolen.fetch_add(1, Ordering::Relaxed);
     }
-    
+
     pub fn record_task_panic(&self) {
         self.tasks_panicked.fetch_add(1, Ordering::Relaxed);
     }
-    
+
     pub fn record_idle_time(&self, duration_ns: u64) {
         self.idle_time_ns.fetch_add(duration_ns, Ordering::Relaxed);
     }
-    
+
     pub fn record_busy_time(&self, duration_ns: u64) {
         self.busy_time_ns.fetch_add(duration_ns, Ordering::Relaxed);
     }
-    
+
     pub fn record_allocation(&self, bytes: usize) {
-        self.memory_allocated.fetch_add(bytes as u64, Ordering::Relaxed);
+        self.memory_allocated
+            .fetch_add(bytes as u64, Ordering::Relaxed);
     }
-    
+
     pub fn snapshot(&self) -> MetricsSnapshot {
         let histogram = self.latency_histogram.read();
-        
+
         MetricsSnapshot {
             timestamp: Instant::now(),
             uptime: self.start_time.elapsed(),
@@ -84,7 +85,7 @@ impl Metrics {
             memory_allocated: self.memory_allocated.load(Ordering::Relaxed),
         }
     }
-    
+
     pub fn reset(&self) {
         self.tasks_executed.store(0, Ordering::Relaxed);
         self.tasks_stolen.store(0, Ordering::Relaxed);
@@ -92,7 +93,7 @@ impl Metrics {
         self.idle_time_ns.store(0, Ordering::Relaxed);
         self.busy_time_ns.store(0, Ordering::Relaxed);
         self.memory_allocated.store(0, Ordering::Relaxed);
-        
+
         if let Some(mut hist) = self.latency_histogram.try_write() {
             hist.reset();
         }
@@ -130,7 +131,7 @@ impl MetricsSnapshot {
         }
         self.busy_time_ns as f64 / total_time as f64
     }
-    
+
     pub fn tasks_per_second(&self) -> f64 {
         let seconds = self.uptime.as_secs_f64();
         if seconds == 0.0 {
@@ -143,32 +144,32 @@ impl MetricsSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_metrics_basic() {
         let metrics = Metrics::new();
-        
+
         metrics.record_task_execution(1000);
         metrics.record_task_execution(2000);
         metrics.record_task_stolen();
-        
+
         let snapshot = metrics.snapshot();
         assert_eq!(snapshot.tasks_executed, 2);
         assert_eq!(snapshot.tasks_stolen, 1);
         assert!(snapshot.avg_latency_ns > 0);
     }
-    
+
     #[test]
     fn test_metrics_reset() {
         let metrics = Metrics::new();
-        
+
         metrics.record_task_execution(1000);
         assert_eq!(metrics.snapshot().tasks_executed, 1);
-        
+
         metrics.reset();
         assert_eq!(metrics.snapshot().tasks_executed, 0);
     }
-    
+
     #[test]
     fn test_utilization() {
         let mut snapshot = MetricsSnapshot {
@@ -186,9 +187,9 @@ mod tests {
             max_latency_ns: 0,
             memory_allocated: 0,
         };
-        
+
         assert_eq!(snapshot.utilization(), 0.5);
-        
+
         snapshot.busy_time_ns = 3_000_000_000;
         assert_eq!(snapshot.utilization(), 0.75);
     }

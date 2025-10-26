@@ -3,8 +3,8 @@
 use super::{AdaptiveScheduler, LoadStatistics, WorkerId, WorkerState};
 use crate::config::{Config, SchedulingPolicy};
 use crate::error::Result;
-use std::sync::Arc;
 use parking_lot::RwLock;
+use std::sync::Arc;
 
 #[cfg(feature = "deterministic")]
 use super::deterministic::DeterministicScheduler;
@@ -25,13 +25,13 @@ pub struct SchedulerCoordinator {
 impl SchedulerCoordinator {
     pub fn new(config: &Config) -> Result<Self> {
         let policy = config.scheduling_policy;
-        
+
         let adaptive = if matches!(policy, SchedulingPolicy::Adaptive) {
             Some(AdaptiveScheduler::new(config.into()))
         } else {
             None
         };
-        
+
         #[cfg(feature = "deterministic")]
         let deterministic = if matches!(policy, SchedulingPolicy::Deterministic { .. }) {
             if let SchedulingPolicy::Deterministic { seed } = policy {
@@ -42,7 +42,7 @@ impl SchedulerCoordinator {
         } else {
             None
         };
-        
+
         #[cfg(feature = "energy-aware")]
         let energy_aware = if matches!(policy, SchedulingPolicy::EnergyEfficient) {
             let energy_config = super::energy::EnergyConfig {
@@ -54,7 +54,7 @@ impl SchedulerCoordinator {
         } else {
             None
         };
-        
+
         Ok(Self {
             policy,
             adaptive,
@@ -64,7 +64,7 @@ impl SchedulerCoordinator {
             energy_aware,
         })
     }
-    
+
     /// Perform scheduling cycle - rebalance, collect stats, etc.
     pub fn schedule_cycle(&self) -> Option<LoadStatistics> {
         match self.policy {
@@ -106,7 +106,7 @@ impl SchedulerCoordinator {
         }
         None
     }
-    
+
     /// Get worker that should handle next task (for deterministic mode)
     pub fn select_worker(&self, num_workers: usize) -> usize {
         match self.policy {
@@ -118,13 +118,13 @@ impl SchedulerCoordinator {
             }
             _ => {}
         }
-        
+
         // Default: round-robin or random
         use std::sync::atomic::{AtomicUsize, Ordering};
         static COUNTER: AtomicUsize = AtomicUsize::new(0);
         COUNTER.fetch_add(1, Ordering::Relaxed) % num_workers
     }
-    
+
     /// Check if task execution should be throttled (energy-aware)
     pub fn should_throttle(&self) -> bool {
         #[cfg(feature = "energy-aware")]
@@ -135,7 +135,7 @@ impl SchedulerCoordinator {
         }
         false
     }
-    
+
     /// Update power consumption (energy-aware)
     #[cfg(feature = "energy-aware")]
     pub fn update_power(&self, watts: f64) {
@@ -143,7 +143,7 @@ impl SchedulerCoordinator {
             energy.power_monitor().update_power(watts);
         }
     }
-    
+
     /// Update temperature (energy-aware)
     #[cfg(feature = "energy-aware")]
     pub fn update_temperature(&self, temp_celsius: f64) {
@@ -151,7 +151,7 @@ impl SchedulerCoordinator {
             energy.thermal_state().update_temperature(temp_celsius);
         }
     }
-    
+
     /// Record task execution for deterministic replay
     #[cfg(feature = "deterministic")]
     pub fn record_task_execution(&self, worker_id: WorkerId, task_id: usize) {
@@ -159,7 +159,7 @@ impl SchedulerCoordinator {
             det.record_execution(worker_id, task_id);
         }
     }
-    
+
     /// Get scheduling policy
     pub fn policy(&self) -> SchedulingPolicy {
         self.policy
@@ -169,7 +169,7 @@ impl SchedulerCoordinator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_coordinator_adaptive() {
         let config = Config::builder()
@@ -177,11 +177,11 @@ mod tests {
             .num_threads(4)
             .build()
             .unwrap();
-        
+
         let coordinator = SchedulerCoordinator::new(&config).unwrap();
         assert_eq!(coordinator.policy(), SchedulingPolicy::Adaptive);
     }
-    
+
     #[test]
     #[cfg(feature = "deterministic")]
     fn test_coordinator_deterministic() {
@@ -190,16 +190,16 @@ mod tests {
             .num_threads(4)
             .build()
             .unwrap();
-        
+
         let coordinator = SchedulerCoordinator::new(&config).unwrap();
-        
+
         // Should produce consistent worker selection
         let w1 = coordinator.select_worker(4);
         let w2 = coordinator.select_worker(4);
         assert!(w1 < 4);
         assert!(w2 < 4);
     }
-    
+
     #[test]
     #[cfg(feature = "energy-aware")]
     fn test_coordinator_energy() {
@@ -209,15 +209,15 @@ mod tests {
             .max_power_watts(50.0)
             .build()
             .unwrap();
-        
+
         let coordinator = SchedulerCoordinator::new(&config).unwrap();
-        
+
         // Should not throttle initially
         assert!(!coordinator.should_throttle());
-        
+
         // Update with high power
         coordinator.update_power(150.0);
-        
+
         // Now should throttle
         assert!(coordinator.should_throttle());
     }

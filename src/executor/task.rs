@@ -34,7 +34,7 @@ impl Task {
             deadline: None,
         }
     }
-    
+
     pub fn with_priority<F>(f: F, priority: Priority) -> Self
     where
         F: FnOnce() + Send + 'static,
@@ -47,12 +47,12 @@ impl Task {
             deadline: None,
         }
     }
-    
+
     pub fn with_deadline(mut self, deadline: Instant) -> Self {
         self.deadline = Some(deadline);
         self
     }
-    
+
     pub fn execute(self) {
         (self.func)();
     }

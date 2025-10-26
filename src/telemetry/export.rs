@@ -26,12 +26,13 @@ impl JsonExporter {
 impl MetricsExporter for JsonExporter {
     fn export(&self, snapshot: &MetricsSnapshot) -> Result<()> {
         let serializable = SerializableSnapshot::from(snapshot);
-        let json = serde_json::to_string_pretty(&serializable)
-            .map_err(|e| crate::error::Error::telemetry(format!("JSON serialization failed: {}", e)))?;
-        
+        let json = serde_json::to_string_pretty(&serializable).map_err(|e| {
+            crate::error::Error::telemetry(format!("JSON serialization failed: {}", e))
+        })?;
+
         std::fs::write(&self.output_path, json)
             .map_err(|e| crate::error::Error::telemetry(format!("Failed to write file: {}", e)))?;
-        
+
         Ok(())
     }
 }
@@ -100,21 +101,27 @@ impl MetricsExporter for ConsoleExporter {
         println!("Tasks panicked: {}", snapshot.tasks_panicked);
         println!("Utilization: {:.1}%", snapshot.utilization() * 100.0);
         println!("Tasks/sec: {:.2}", snapshot.tasks_per_second());
-        
+
         if self.verbose {
             println!("\nLatency:");
-            println!("  Average: {:.2}μs", snapshot.avg_latency_ns as f64 / 1_000.0);
+            println!(
+                "  Average: {:.2}μs",
+                snapshot.avg_latency_ns as f64 / 1_000.0
+            );
             println!("  P50: {:.2}μs", snapshot.p50_latency_ns as f64 / 1_000.0);
             println!("  P95: {:.2}μs", snapshot.p95_latency_ns as f64 / 1_000.0);
             println!("  P99: {:.2}μs", snapshot.p99_latency_ns as f64 / 1_000.0);
             println!("  Max: {:.2}μs", snapshot.max_latency_ns as f64 / 1_000.0);
-            
+
             println!("\nMemory:");
-            println!("  Allocated: {:.2}MB", snapshot.memory_allocated as f64 / (1024.0 * 1024.0));
+            println!(
+                "  Allocated: {:.2}MB",
+                snapshot.memory_allocated as f64 / (1024.0 * 1024.0)
+            );
         }
-        
+
         println!("===========================");
-        
+
         Ok(())
     }
 }
@@ -129,7 +136,7 @@ impl Default for ConsoleExporter {
 mod tests {
     use super::*;
     use std::time::Instant;
-    
+
     fn dummy_snapshot() -> MetricsSnapshot {
         MetricsSnapshot {
             timestamp: Instant::now(),
@@ -147,27 +154,27 @@ mod tests {
             memory_allocated: 1024 * 1024, // 1MB
         }
     }
-    
+
     #[test]
     fn test_console_exporter() {
         let exporter = ConsoleExporter::new(false);
         let snapshot = dummy_snapshot();
-        
+
         // Should not panic
         assert!(exporter.export(&snapshot).is_ok());
     }
-    
+
     #[test]
     fn test_json_exporter() {
         use std::env::temp_dir;
-        
+
         let path = temp_dir().join("veda_metrics_test.json");
         let exporter = JsonExporter::new(&path);
         let snapshot = dummy_snapshot();
-        
+
         assert!(exporter.export(&snapshot).is_ok());
         assert!(path.exists());
-        
+
         // Clean up
         let _ = std::fs::remove_file(&path);
     }

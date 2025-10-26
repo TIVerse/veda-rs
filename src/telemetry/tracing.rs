@@ -1,10 +1,10 @@
 //! Execution tracing for detailed performance analysis.
 
+use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::Instant;
 use std::sync::Arc;
-use parking_lot::RwLock;
+use std::time::Instant;
 
 thread_local! {
     static CURRENT_SPAN: std::cell::RefCell<Option<SpanId>> = std::cell::RefCell::new(None);
@@ -71,7 +71,7 @@ impl TracingSystem {
             enabled,
         }
     }
-    
+
     /// Enter a new span
     pub fn enter_span(&self, name: &str) -> SpanGuard<'_> {
         if !self.enabled {
@@ -80,12 +80,12 @@ impl TracingSystem {
                 system: self,
             };
         }
-        
+
         let span_id = SpanId::new();
-        
+
         // Get parent span from thread-local storage
         let parent = CURRENT_SPAN.with(|current| *current.borrow());
-        
+
         let span = Span {
             id: span_id,
             parent,
@@ -95,26 +95,26 @@ impl TracingSystem {
             metadata: HashMap::new(),
             events: Vec::new(),
         };
-        
+
         // Set this as the current span
         CURRENT_SPAN.with(|current| {
             *current.borrow_mut() = Some(span_id);
         });
-        
+
         self.spans.write().insert(span_id, span);
-        
+
         SpanGuard {
             span_id: Some(span_id),
             system: self,
         }
     }
-    
+
     /// Record an event within the current span
     pub fn record_event(&self, span_id: SpanId, message: String, level: EventLevel) {
         if !self.enabled {
             return;
         }
-        
+
         if let Some(span) = self.spans.write().get_mut(&span_id) {
             span.events.push(SpanEvent {
                 timestamp: Instant::now(),
@@ -123,28 +123,28 @@ impl TracingSystem {
             });
         }
     }
-    
+
     /// Add metadata to a span
     pub fn add_metadata(&self, span_id: SpanId, key: String, value: String) {
         if !self.enabled {
             return;
         }
-        
+
         if let Some(span) = self.spans.write().get_mut(&span_id) {
             span.metadata.insert(key, value);
         }
     }
-    
+
     /// Get a snapshot of all spans
     pub fn spans_snapshot(&self) -> Vec<Span> {
         self.spans.read().values().cloned().collect()
     }
-    
+
     /// Clear all recorded spans
     pub fn clear(&self) {
         self.spans.write().clear();
     }
-    
+
     /// Close a span (mark its end time)
     fn close_span(&self, span_id: SpanId) {
         if let Some(span) = self.spans.write().get_mut(&span_id) {
@@ -170,14 +170,14 @@ impl<'a> SpanGuard<'a> {
     pub fn span_id(&self) -> Option<SpanId> {
         self.span_id
     }
-    
+
     /// Record an event in this span
     pub fn event(&self, message: impl Into<String>, level: EventLevel) {
         if let Some(span_id) = self.span_id {
             self.system.record_event(span_id, message.into(), level);
         }
     }
-    
+
     /// Add metadata to this span
     pub fn metadata(&self, key: impl Into<String>, value: impl Into<String>) {
         if let Some(span_id) = self.span_id {
@@ -190,13 +190,16 @@ impl<'a> Drop for SpanGuard<'a> {
     fn drop(&mut self) {
         if let Some(span_id) = self.span_id {
             // Get parent before closing
-            let parent = self.system.spans.read()
+            let parent = self
+                .system
+                .spans
+                .read()
                 .get(&span_id)
                 .and_then(|span| span.parent);
-            
+
             // Close the span
             self.system.close_span(span_id);
-            
+
             // Restore parent as current span
             CURRENT_SPAN.with(|current| {
                 *current.borrow_mut() = parent;
@@ -208,50 +211,50 @@ impl<'a> Drop for SpanGuard<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_tracing_basic() {
         let tracing = TracingSystem::new(true);
-        
+
         {
             let _guard = tracing.enter_span("test");
             // Span is active
         }
         // Span is closed
-        
+
         let spans = tracing.spans_snapshot();
         assert_eq!(spans.len(), 1);
         assert_eq!(spans[0].name, "test");
         assert!(spans[0].end.is_some());
     }
-    
+
     #[test]
     fn test_span_events() {
         let tracing = TracingSystem::new(true);
-        
+
         let guard = tracing.enter_span("test");
         guard.event("something happened", EventLevel::Info);
         guard.event("error occurred", EventLevel::Error);
-        
+
         let span_id = guard.span_id().unwrap();
         drop(guard);
-        
+
         let spans = tracing.spans_snapshot();
         let span = spans.iter().find(|s| s.id == span_id).unwrap();
         assert_eq!(span.events.len(), 2);
     }
-    
+
     #[test]
     fn test_span_metadata() {
         let tracing = TracingSystem::new(true);
-        
+
         let guard = tracing.enter_span("test");
         guard.metadata("key", "value");
         guard.metadata("worker_id", "42");
-        
+
         let span_id = guard.span_id().unwrap();
         drop(guard);
-        
+
         let spans = tracing.spans_snapshot();
         let span = spans.iter().find(|s| s.id == span_id).unwrap();
         assert_eq!(span.metadata.len(), 2);

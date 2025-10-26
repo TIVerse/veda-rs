@@ -47,13 +47,13 @@ impl Worker {
             metrics: None,
         }
     }
-    
+
     #[cfg(feature = "telemetry")]
     pub fn with_metrics(mut self, metrics: Arc<Metrics>) -> Self {
         self.metrics = Some(metrics);
         self
     }
-    
+
     // main loop
     pub fn run(
         &self,
@@ -64,19 +64,19 @@ impl Worker {
         pending_tasks: Arc<AtomicUsize>,
     ) {
         let mut backoff_cnt = 0;
-        
+
         loop {
             if shutdown.load(Ordering::Acquire) {
                 break;
             }
-            
+
             // Priority: local -> priority queue -> global -> steal
             if let Some(task) = self.find_task(&stealers, &injector, &priority_queue) {
                 backoff_cnt = 0;
                 let start = Instant::now();
                 self.execute_task(task);
                 pending_tasks.fetch_sub(1, Ordering::Relaxed);
-                
+
                 // Record execution time for metrics
                 #[cfg(feature = "telemetry")]
                 if let Some(ref _metrics) = self.metrics {
@@ -91,13 +91,18 @@ impl Worker {
             }
         }
     }
-    
-    fn find_task(&self, stealers: &[Stealer<Task>], injector: &Injector<Task>, priority_queue: &PriorityQueue) -> Option<Task> {
+
+    fn find_task(
+        &self,
+        stealers: &[Stealer<Task>],
+        injector: &Injector<Task>,
+        priority_queue: &PriorityQueue,
+    ) -> Option<Task> {
         // 1. Check local queue first (best cache locality)
         if let Some(task) = self.local_queue.pop() {
             return Some(task);
         }
-        
+
         // 2. Check priority queue for high-priority/deadline tasks
         if let Some(task) = priority_queue.pop() {
             self.state.tasks_stolen.fetch_add(1, Ordering::Relaxed);
@@ -107,7 +112,7 @@ impl Worker {
             }
             return Some(task);
         }
-        
+
         // 3. Check global injector queue
         loop {
             match injector.steal_batch_and_pop(&self.local_queue) {
@@ -123,23 +128,27 @@ impl Worker {
                 crossbeam_deque::Steal::Retry => continue,
             }
         }
-        
+
         // 4. Steal from other workers
         self.try_steal_from_workers(stealers)
     }
-    
+
     fn try_steal_from_workers(&self, stealers: &[Stealer<Task>]) -> Option<Task> {
         use rand::seq::SliceRandom;
         use rand::thread_rng;
-        
-        if stealers.is_empty() { return None; }
-        
+
+        if stealers.is_empty() {
+            return None;
+        }
+
         let mut indices: Vec<usize> = (0..stealers.len()).collect();
         indices.shuffle(&mut thread_rng());
-        
+
         for &idx in &indices {
-            if idx == self.id { continue; }
-            
+            if idx == self.id {
+                continue;
+            }
+
             loop {
                 match stealers[idx].steal_batch_and_pop(&self.local_queue) {
                     crossbeam_deque::Steal::Success(task) => {
@@ -155,22 +164,23 @@ impl Worker {
                 }
             }
         }
-        
+
         None
     }
-    
+
     fn execute_task(&self, task: Task) {
         let tid = task.id;
         let start = Instant::now();
-        
+
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             task.execute();
         }));
-        
+
         let duration_ns = start.elapsed().as_nanos() as u64;
-        
+
         match result {
-            Ok(_) => {
+            Ok(_) =>
+            {
                 #[cfg(feature = "telemetry")]
                 if let Some(ref metrics) = self.metrics {
                     metrics.record_task_execution(duration_ns);
@@ -184,16 +194,16 @@ impl Worker {
                 }
             }
         }
-        
+
         self.state.tasks_executed.fetch_add(1, Ordering::Relaxed);
     }
-    
+
     fn backoff(&self, count: &mut u32) -> bool {
         const MAX_SPINS: u32 = 10;
         const MAX_YIELDS: u32 = 20;
-        
+
         *count += 1;
-        
+
         if *count <= MAX_SPINS {
             let spins = (*count).min(6);
             for _ in 0..(1 << spins) {
@@ -204,7 +214,7 @@ impl Worker {
         } else {
             thread::park_timeout(Duration::from_micros(100));
         }
-        
+
         false
     }
 }

@@ -1,9 +1,9 @@
 use crate::executor::Task;
+use parking_lot::Mutex;
 use std::cmp::Ordering as CmpOrdering;
 use std::collections::BinaryHeap;
 use std::sync::Arc;
 use std::time::Instant;
-use parking_lot::Mutex;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(u8)]
@@ -38,7 +38,7 @@ impl PriorityTask {
             enqueue_time: Instant::now(),
         }
     }
-    
+
     pub fn with_deadline(mut self, deadline: Instant) -> Self {
         self.deadline = Some(deadline);
         self
@@ -72,12 +72,12 @@ impl Ord for PriorityTask {
             (None, Some(_)) => return CmpOrdering::Less,
             (None, None) => {}
         }
-        
+
         let priority_cmp = other.priority.cmp(&self.priority);
         if priority_cmp != CmpOrdering::Equal {
             return priority_cmp;
         }
-        
+
         other.enqueue_time.cmp(&self.enqueue_time)
     }
 }
@@ -92,29 +92,29 @@ impl PriorityQueue {
             heap: Arc::new(Mutex::new(BinaryHeap::new())),
         }
     }
-    
+
     pub fn push(&self, task: Task, priority: Priority) {
         let priority_task = PriorityTask::new(task, priority);
         self.heap.lock().push(priority_task);
     }
-    
+
     pub fn push_with_deadline(&self, task: Task, priority: Priority, deadline: Instant) {
         let priority_task = PriorityTask::new(task, priority).with_deadline(deadline);
         self.heap.lock().push(priority_task);
     }
-    
+
     pub fn pop(&self) -> Option<Task> {
         self.heap.lock().pop().map(|pt| pt.task)
     }
-    
+
     pub fn is_empty(&self) -> bool {
         self.heap.lock().is_empty()
     }
-    
+
     pub fn len(&self) -> usize {
         self.heap.lock().len()
     }
-    
+
     pub fn peek(&self) -> Option<Priority> {
         self.heap.lock().peek().map(|pt| pt.priority)
     }
@@ -137,11 +137,11 @@ impl Clone for PriorityQueue {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     fn dummy_task() -> Task {
         Task::new(Box::new(|| {}))
     }
-    
+
     #[test]
     fn test_priority_ordering() {
         assert!(Priority::Realtime < Priority::High);
@@ -149,42 +149,42 @@ mod tests {
         assert!(Priority::Normal < Priority::Low);
         assert!(Priority::Low < Priority::Background);
     }
-    
+
     #[test]
     fn test_priority_queue() {
         let queue = PriorityQueue::new();
-        
+
         queue.push(dummy_task(), Priority::Low);
         queue.push(dummy_task(), Priority::Realtime);
         queue.push(dummy_task(), Priority::Normal);
-        
+
         assert_eq!(queue.peek(), Some(Priority::Realtime));
         queue.pop();
         assert_eq!(queue.peek(), Some(Priority::Normal));
         queue.pop();
         assert_eq!(queue.peek(), Some(Priority::Low));
     }
-    
+
     #[test]
     fn test_deadline_priority() {
         let queue = PriorityQueue::new();
         let now = Instant::now();
-        
+
         queue.push_with_deadline(
             dummy_task(),
             Priority::Normal,
             now + std::time::Duration::from_secs(10),
         );
-        
+
         queue.push_with_deadline(
             dummy_task(),
             Priority::Normal,
             now + std::time::Duration::from_secs(1),
         );
-        
+
         let task1 = queue.pop();
         assert!(task1.is_some());
-        
+
         let task2 = queue.pop();
         assert!(task2.is_some());
     }

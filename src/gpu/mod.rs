@@ -1,11 +1,11 @@
-pub mod runtime;
-pub mod kernel;
 pub mod buffer;
+pub mod kernel;
+pub mod runtime;
 pub mod scheduler;
 
+pub use buffer::{BufferPool, GpuBuffer};
+pub use kernel::{CompiledKernel, GpuKernel};
 pub use runtime::GpuRuntime;
-pub use kernel::{GpuKernel, CompiledKernel};
-pub use buffer::{GpuBuffer, BufferPool};
 pub use scheduler::GpuScheduler;
 
 use crate::error::Result;

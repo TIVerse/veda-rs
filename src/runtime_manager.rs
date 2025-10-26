@@ -3,15 +3,15 @@
 use crate::config::Config;
 use crate::error::Result;
 use crate::runtime::Runtime;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-use std::sync::atomic::{AtomicBool, Ordering};
 
 #[cfg(feature = "telemetry")]
-use crate::telemetry::{Metrics, FeedbackController};
-#[cfg(feature = "telemetry")]
 use crate::telemetry::feedback::FeedbackConfig;
+#[cfg(feature = "telemetry")]
+use crate::telemetry::{FeedbackController, Metrics};
 
 /// Runtime manager that coordinates adaptive scheduling
 pub struct RuntimeManager {
@@ -25,14 +25,14 @@ pub struct RuntimeManager {
 impl RuntimeManager {
     pub fn new(config: Config) -> Result<Self> {
         let runtime = Arc::new(Runtime::new(config)?);
-        
+
         #[cfg(feature = "telemetry")]
         let (feedback_handle, feedback_shutdown) = {
             let shutdown = Arc::new(AtomicBool::new(false));
             let handle = if runtime.config().enable_telemetry {
                 let metrics = runtime.pool.metrics.clone();
                 let shutdown_clone = shutdown.clone();
-                
+
                 let feedback_config = FeedbackConfig {
                     min_task_rate: 10.0,
                     max_latency_ns: 100_000_000, // 100ms
@@ -40,21 +40,23 @@ impl RuntimeManager {
                     update_interval: Duration::from_millis(100),
                     history_size: 100,
                 };
-                
+
                 let controller = FeedbackController::new(metrics, feedback_config);
-                
-                Some(thread::Builder::new()
-                    .name("veda-feedback".to_string())
-                    .spawn(move || {
-                        feedback_loop(controller, shutdown_clone);
-                    })
-                    .expect("Failed to spawn feedback thread"))
+
+                Some(
+                    thread::Builder::new()
+                        .name("veda-feedback".to_string())
+                        .spawn(move || {
+                            feedback_loop(controller, shutdown_clone);
+                        })
+                        .expect("Failed to spawn feedback thread"),
+                )
             } else {
                 None
             };
             (handle, shutdown)
         };
-        
+
         Ok(Self {
             runtime,
             #[cfg(feature = "telemetry")]
@@ -63,7 +65,7 @@ impl RuntimeManager {
             feedback_shutdown,
         })
     }
-    
+
     pub fn runtime(&self) -> &Arc<Runtime> {
         &self.runtime
     }
@@ -83,8 +85,8 @@ impl Drop for RuntimeManager {
 
 #[cfg(feature = "telemetry")]
 fn feedback_loop(controller: FeedbackController, shutdown: Arc<AtomicBool>) {
-    use crate::util::{BackpressureController, BackpressureConfig};
-    
+    use crate::util::{BackpressureConfig, BackpressureController};
+
     // Create backpressure controller for adaptive rate limiting
     let backpressure = BackpressureController::new(BackpressureConfig {
         max_queue_size: 10_000,
@@ -92,29 +94,33 @@ fn feedback_loop(controller: FeedbackController, shutdown: Arc<AtomicBool>) {
         rate_limit_per_sec: None,
         backoff_factor: 0.5,
     });
-    
+
     while !shutdown.load(Ordering::Acquire) {
         let action = controller.update();
-        
+
         match action {
             crate::telemetry::feedback::FeedbackAction::IncreaseParallelism { reason } => {
                 // Increase max queue size to allow more parallel work
                 let current_max = backpressure.queue_size() * 2;
                 backpressure.set_max_queue_size(current_max.min(50_000));
-                
+
                 if cfg!(debug_assertions) {
-                    eprintln!("[VEDA Feedback] Increasing parallelism: {} (new max queue: {})", 
-                        reason, current_max);
+                    eprintln!(
+                        "[VEDA Feedback] Increasing parallelism: {} (new max queue: {})",
+                        reason, current_max
+                    );
                 }
             }
             crate::telemetry::feedback::FeedbackAction::ReduceLoad { reason } => {
                 // Reduce max queue size to throttle admission
                 let current_max = (backpressure.queue_size() * 3 / 4).max(1000);
                 backpressure.set_max_queue_size(current_max);
-                
+
                 if cfg!(debug_assertions) {
-                    eprintln!("[VEDA Feedback] Reducing load: {} (new max queue: {})", 
-                        reason, current_max);
+                    eprintln!(
+                        "[VEDA Feedback] Reducing load: {} (new max queue: {})",
+                        reason, current_max
+                    );
                 }
             }
             crate::telemetry::feedback::FeedbackAction::OptimizeResources { reason } => {
@@ -126,14 +132,14 @@ fn feedback_loop(controller: FeedbackController, shutdown: Arc<AtomicBool>) {
                         backpressure.set_max_queue_size(current_max);
                     }
                 }
-                
+
                 if cfg!(debug_assertions) {
                     eprintln!("[VEDA Feedback] Optimizing resources: {}", reason);
                 }
             }
             crate::telemetry::feedback::FeedbackAction::None => {}
         }
-        
+
         thread::sleep(Duration::from_millis(100));
     }
 }

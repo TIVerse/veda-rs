@@ -4,7 +4,7 @@
 use veda_rs::prelude::*;
 
 #[cfg(feature = "gpu")]
-use veda_rs::gpu::{GpuRuntime, GpuKernel, GpuBuffer};
+use veda_rs::gpu::{GpuBuffer, GpuKernel, GpuRuntime};
 
 #[cfg(feature = "gpu")]
 struct VectorAddKernel {
@@ -23,12 +23,15 @@ impl GpuKernel for VectorAddKernel {
     fn input_size(&self) -> usize {
         self.size * std::mem::size_of::<f32>() * 2
     }
-    
+
     fn output_size(&self) -> usize {
         self.size * std::mem::size_of::<f32>()
     }
-    
-    fn compile(&self, device: &wgpu::Device) -> veda_rs::error::Result<veda_rs::gpu::CompiledKernel> {
+
+    fn compile(
+        &self,
+        device: &wgpu::Device,
+    ) -> veda_rs::error::Result<veda_rs::gpu::CompiledKernel> {
         // WGSL shader for vector addition
         let shader_source = r#"
             @group(0) @binding(0) var<storage, read> input_a: array<f32>;
@@ -43,19 +46,19 @@ impl GpuKernel for VectorAddKernel {
                 }
             }
         "#;
-        
+
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("vector-add-shader"),
             source: wgpu::ShaderSource::Wgsl(shader_source.into()),
         });
-        
+
         let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("vector-add-pipeline"),
             layout: None,
             module: &shader,
             entry_point: "main",
         });
-        
+
         Ok(veda_rs::gpu::CompiledKernel {
             pipeline,
             workgroup_size: (256, 1, 1),
@@ -66,40 +69,40 @@ impl GpuKernel for VectorAddKernel {
 #[cfg(feature = "gpu")]
 async fn run_gpu_demo() -> veda_rs::error::Result<()> {
     println!("=== GPU Compute Demo ===\n");
-    
+
     // Initialize GPU runtime
     println!("Initializing GPU runtime...");
     let gpu = GpuRuntime::get_or_init().await?;
-    
+
     println!("✓ GPU device initialized");
     println!("  Device: {}", gpu.device_name());
     println!("  Backend: {}", gpu.backend_name());
-    
+
     // Create test data
     let size = 1024;
     let data_a: Vec<f32> = (0..size).map(|i| i as f32).collect();
     let data_b: Vec<f32> = (0..size).map(|i| (i * 2) as f32).collect();
-    
+
     println!("\nVector addition: {} elements", size);
     println!("  A[0..5] = {:?}", &data_a[0..5]);
     println!("  B[0..5] = {:?}", &data_b[0..5]);
-    
+
     // Create GPU kernel
     let kernel = VectorAddKernel::new(size);
-    
+
     // Execute on GPU
     println!("\nExecuting on GPU...");
     let result = gpu.execute_kernel(kernel).await?;
-    
+
     // Convert result bytes back to f32
     let result_f32: Vec<f32> = result
         .chunks_exact(4)
         .map(|bytes| f32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
         .collect();
-    
+
     println!("✓ GPU execution complete");
     println!("  Result[0..5] = {:?}", &result_f32[0..5]);
-    
+
     // Verify results
     let mut correct = 0;
     for i in 0..size.min(result_f32.len()) {
@@ -107,45 +110,42 @@ async fn run_gpu_demo() -> veda_rs::error::Result<()> {
             correct += 1;
         }
     }
-    
+
     println!("\nVerification: {}/{} correct", correct, size);
-    
+
     if correct == size {
         println!("✓ All results correct!");
     } else {
         println!("⚠ Some results incorrect");
     }
-    
+
     Ok(())
 }
 
 #[cfg(feature = "gpu")]
 fn run_hybrid_demo() {
     println!("\n=== Hybrid CPU/GPU Demo ===\n");
-    
+
     // Initialize VEDA runtime
     let config = Config::builder()
         .num_threads(4)
         .enable_gpu(true)
         .build()
         .unwrap();
-    
+
     init_with_config(config).unwrap();
-    
+
     // CPU parallel computation
     println!("Computing on CPU...");
-    let cpu_result: i64 = (0..1_000_000)
-        .into_par_iter()
-        .map(|x| x * 2)
-        .sum();
-    
+    let cpu_result: i64 = (0..1_000_000).into_par_iter().map(|x| x * 2).sum();
+
     println!("✓ CPU result: {}", cpu_result);
-    
+
     // Note: GPU execution would happen here in a real scenario
     // For this example, we've demonstrated GPU capability separately
-    
+
     println!("\n✓ Hybrid execution complete");
-    
+
     shutdown();
 }
 
@@ -163,10 +163,10 @@ async fn main() -> veda_rs::error::Result<()> {
         eprintln!("GPU demo failed: {}", e);
         eprintln!("This may be expected if no GPU is available.");
     }
-    
+
     // Run hybrid demo
     run_hybrid_demo();
-    
+
     println!("\n=== Demo Complete ===");
     Ok(())
 }

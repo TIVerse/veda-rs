@@ -17,7 +17,7 @@ pub use metrics::{Metrics, MetricsSnapshot};
 pub use tracing::{Span, SpanGuard, TracingSystem};
 
 #[cfg(feature = "telemetry")]
-pub use export::{MetricsExporter, JsonExporter};
+pub use export::{JsonExporter, MetricsExporter};
 
 #[cfg(feature = "telemetry")]
 pub use feedback::FeedbackController;
@@ -25,18 +25,22 @@ pub use feedback::FeedbackController;
 #[cfg(not(feature = "telemetry"))]
 pub mod metrics {
     use std::time::Instant;
-    
+
     #[derive(Debug, Clone)]
     pub struct Metrics;
-    
+
     impl Metrics {
-        pub fn new() -> Self { Self }
+        pub fn new() -> Self {
+            Self
+        }
         pub fn record_task_execution(&self, _: u64) {}
         pub fn record_task_stolen(&self) {}
         pub fn record_task_panic(&self) {}
-        pub fn snapshot(&self) -> MetricsSnapshot { MetricsSnapshot::default() }
+        pub fn snapshot(&self) -> MetricsSnapshot {
+            MetricsSnapshot::default()
+        }
     }
-    
+
     #[derive(Debug, Clone, Default)]
     pub struct MetricsSnapshot {
         pub timestamp: Option<Instant>,

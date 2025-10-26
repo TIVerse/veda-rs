@@ -1,6 +1,6 @@
 //! Benchmarks comparing parallel vs sequential execution
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use veda_rs::prelude::*;
 
 fn sequential_sum(n: i32) -> i32 {
@@ -12,10 +12,7 @@ fn parallel_sum(n: i32) -> i32 {
 }
 
 fn sequential_map_filter(n: i32) -> Vec<i32> {
-    (0..n)
-        .filter(|x| x % 2 == 0)
-        .map(|x| x * x)
-        .collect()
+    (0..n).filter(|x| x % 2 == 0).map(|x| x * x).collect()
 }
 
 fn parallel_map_filter(n: i32) -> Vec<i32> {
@@ -42,69 +39,57 @@ fn parallel_fold(n: i32) -> i64 {
 
 fn bench_sum(c: &mut Criterion) {
     veda_rs::init().expect("Failed to initialize");
-    
+
     let mut group = c.benchmark_group("sum");
-    
+
     for size in [100, 1_000, 10_000, 100_000].iter() {
-        group.bench_with_input(
-            BenchmarkId::new("sequential", size),
-            size,
-            |b, &size| b.iter(|| sequential_sum(black_box(size)))
-        );
-        
-        group.bench_with_input(
-            BenchmarkId::new("parallel", size),
-            size,
-            |b, &size| b.iter(|| parallel_sum(black_box(size)))
-        );
+        group.bench_with_input(BenchmarkId::new("sequential", size), size, |b, &size| {
+            b.iter(|| sequential_sum(black_box(size)))
+        });
+
+        group.bench_with_input(BenchmarkId::new("parallel", size), size, |b, &size| {
+            b.iter(|| parallel_sum(black_box(size)))
+        });
     }
-    
+
     group.finish();
     veda_rs::shutdown();
 }
 
 fn bench_map_filter(c: &mut Criterion) {
     veda_rs::init().expect("Failed to initialize");
-    
+
     let mut group = c.benchmark_group("map_filter");
-    
+
     for size in [100, 1_000, 10_000, 100_000].iter() {
-        group.bench_with_input(
-            BenchmarkId::new("sequential", size),
-            size,
-            |b, &size| b.iter(|| sequential_map_filter(black_box(size)))
-        );
-        
-        group.bench_with_input(
-            BenchmarkId::new("parallel", size),
-            size,
-            |b, &size| b.iter(|| parallel_map_filter(black_box(size)))
-        );
+        group.bench_with_input(BenchmarkId::new("sequential", size), size, |b, &size| {
+            b.iter(|| sequential_map_filter(black_box(size)))
+        });
+
+        group.bench_with_input(BenchmarkId::new("parallel", size), size, |b, &size| {
+            b.iter(|| parallel_map_filter(black_box(size)))
+        });
     }
-    
+
     group.finish();
     veda_rs::shutdown();
 }
 
 fn bench_fold(c: &mut Criterion) {
     veda_rs::init().expect("Failed to initialize");
-    
+
     let mut group = c.benchmark_group("fold");
-    
+
     for size in [100, 1_000, 10_000].iter() {
-        group.bench_with_input(
-            BenchmarkId::new("sequential", size),
-            size,
-            |b, &size| b.iter(|| sequential_fold(black_box(size)))
-        );
-        
-        group.bench_with_input(
-            BenchmarkId::new("parallel", size),
-            size,
-            |b, &size| b.iter(|| parallel_fold(black_box(size)))
-        );
+        group.bench_with_input(BenchmarkId::new("sequential", size), size, |b, &size| {
+            b.iter(|| sequential_fold(black_box(size)))
+        });
+
+        group.bench_with_input(BenchmarkId::new("parallel", size), size, |b, &size| {
+            b.iter(|| parallel_fold(black_box(size)))
+        });
     }
-    
+
     group.finish();
     veda_rs::shutdown();
 }

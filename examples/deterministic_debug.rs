@@ -15,56 +15,50 @@ fn complex_computation(x: i32) -> i32 {
 #[cfg(feature = "deterministic")]
 fn main() {
     println!("=== Deterministic Execution Example ===\n");
-    
+
     let seed = 42;
-    
+
     // Configure deterministic mode
     let config = veda_rs::Config::builder()
         .scheduling_policy(veda_rs::SchedulingPolicy::Deterministic { seed })
         .num_threads(4)
         .build()
         .expect("Failed to build config");
-    
+
     veda_rs::init_with_config(config).expect("Failed to initialize");
-    
+
     println!("Running with deterministic seed: {}", seed);
-    
+
     // Run 1
-    let result1: Vec<i32> = (0..100)
-        .into_par_iter()
-        .map(complex_computation)
-        .collect();
-    
+    let result1: Vec<i32> = (0..100).into_par_iter().map(complex_computation).collect();
+
     println!("First run complete: {} results", result1.len());
-    
+
     veda_rs::shutdown();
-    
+
     // Run 2 with same seed
     let config2 = veda_rs::Config::builder()
         .scheduling_policy(veda_rs::SchedulingPolicy::Deterministic { seed })
         .num_threads(4)
         .build()
         .expect("Failed to build config");
-    
+
     veda_rs::init_with_config(config2).expect("Failed to initialize");
-    
-    let result2: Vec<i32> = (0..100)
-        .into_par_iter()
-        .map(complex_computation)
-        .collect();
-    
+
+    let result2: Vec<i32> = (0..100).into_par_iter().map(complex_computation).collect();
+
     println!("Second run complete: {} results", result2.len());
-    
+
     // Verify determinism
     let identical = result1 == result2;
     println!("\nResults identical: {}", identical);
-    
+
     if identical {
         println!("✓ Deterministic execution verified!");
     } else {
         println!("✗ Results differ (this shouldn't happen)");
     }
-    
+
     veda_rs::shutdown();
     println!("\n=== Example Complete ===");
 }

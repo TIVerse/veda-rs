@@ -9,9 +9,9 @@ fn bench_static_scheduling(c: &mut Criterion) {
         .scheduling_policy(SchedulingPolicy::Fixed)
         .build()
         .unwrap();
-    
+
     veda_rs::init_with_config(config).unwrap();
-    
+
     c.bench_function("static_scheduling", |b| {
         b.iter(|| {
             (0..10_000 as i32)
@@ -20,7 +20,7 @@ fn bench_static_scheduling(c: &mut Criterion) {
                 .sum::<i32>()
         })
     });
-    
+
     veda_rs::shutdown();
 }
 
@@ -29,9 +29,9 @@ fn bench_adaptive_scheduling(c: &mut Criterion) {
         .scheduling_policy(SchedulingPolicy::Adaptive)
         .build()
         .unwrap();
-    
+
     veda_rs::init_with_config(config).unwrap();
-    
+
     c.bench_function("adaptive_scheduling", |b| {
         b.iter(|| {
             (0..10_000 as i32)
@@ -40,7 +40,7 @@ fn bench_adaptive_scheduling(c: &mut Criterion) {
                 .sum::<i32>()
         })
     });
-    
+
     veda_rs::shutdown();
 }
 
@@ -49,9 +49,9 @@ fn bench_variable_workload(c: &mut Criterion) {
         .scheduling_policy(SchedulingPolicy::Adaptive)
         .build()
         .unwrap();
-    
+
     veda_rs::init_with_config(config).unwrap();
-    
+
     c.bench_function("variable_workload", |b| {
         b.iter(|| {
             (0..1_000 as i32)
@@ -63,7 +63,7 @@ fn bench_variable_workload(c: &mut Criterion) {
                 .sum::<i32>()
         })
     });
-    
+
     veda_rs::shutdown();
 }
 

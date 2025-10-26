@@ -54,17 +54,17 @@ impl Error {
     pub fn config<S: Into<String>>(msg: S) -> Self {
         Error::Config(msg.into())
     }
-    
+
     #[cfg(feature = "gpu")]
     pub fn gpu<S: Into<String>>(msg: S) -> Self {
         Error::Gpu(msg.into())
     }
-    
+
     #[cfg(feature = "async")]
     pub fn async_error<S: Into<String>>(msg: S) -> Self {
         Error::Async(msg.into())
     }
-    
+
     #[cfg(feature = "telemetry")]
     pub fn telemetry<S: Into<String>>(msg: S) -> Self {
         Error::Other(format!("telemetry: {}", msg.into()))
