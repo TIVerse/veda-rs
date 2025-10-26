@@ -47,7 +47,7 @@ serde_json = { version = "1.0" }
 
 # Random number generation (required for work stealing)
 rand = "0.8"
-rand_pcg = { version = "0.3", optional = true }
+rand_pcg = { version = "0.9", optional = true }
 
 # Error handling
 thiserror = "1.0"
