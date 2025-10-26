@@ -2,13 +2,27 @@
 name = "veda-rs"
 version = "1.0.0"
 edition = "2021"
-authors = ["VEDA Core Team"]
-description = "Adaptive parallel runtime for Rust with heterogeneous compute support"
+authors = ["Eshan Roy <eshanized@proton.me>"]
+description = "High-performance parallel runtime for Rust with work-stealing and adaptive scheduling"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/veda-rs/veda"
+repository = "https://github.com/TIVerse/veda-rs"
 readme = "README.md"
-keywords = ["parallel", "concurrency", "async", "gpu", "rayon"]
-categories = ["concurrency", "asynchronous"]
+documentation = "https://docs.rs/veda-rs"
+keywords = [
+    "parallel", 
+    "concurrency",
+    "work-stealing", 
+    "thread-pool",
+    "data-parallelism"
+]
+categories = [
+    "concurrency", 
+    "asynchronous", 
+    "data-structures",
+    "algorithms"
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 # Core concurrency
@@ -52,21 +66,27 @@ rayon = "1.8"
 proptest = "1.4"
 
 [features]
+# Core features
 default = ["adaptive", "telemetry"]
 
-# Core features
-adaptive = []
-deterministic = ["rand_pcg"]
-telemetry = ["hdrhistogram"]
+## Basic Features
+adaptive = []  # Enable adaptive scheduling (on by default)
 
-# Hardware features
-gpu = ["wgpu"]
-numa = ["libnuma"]
+## Advanced Features
+deterministic = ["rand_pcg"]  # Enable deterministic execution mode
+telemetry = ["hdrhistogram"]  # Enable performance metrics collection
 
-# Integration features
-async = ["futures", "async-channel"]
-tokio-compat = ["async"]
+## Hardware Acceleration
+gpu = ["wgpu"]  # Enable GPU offloading (experimental)
+numa = ["libnuma"]  # Enable NUMA awareness (Linux only)
+energy-aware = []  # Energy-efficient scheduling (future)
 
-# Advanced features
-energy-aware = []
-custom-allocators = []
+## Integration Features
+async = ["futures", "async-channel"]  # Enable async/await support
+tokio-compat = ["async"]  # Enable Tokio runtime integration
+
+## Experimental Features
+custom-allocators = []  # Support for custom allocators (future)
+
+# Internal Features (for development)
+__internal_test = []  # Internal testing features
