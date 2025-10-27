@@ -50,7 +50,7 @@ rand = "0.8"
 rand_pcg = { version = "0.3", optional = true }
 
 # Error handling
-thiserror = "1.0"
+thiserror = "2.0"
 
 # Parking for thread synchronization
 parking_lot = "0.12"
